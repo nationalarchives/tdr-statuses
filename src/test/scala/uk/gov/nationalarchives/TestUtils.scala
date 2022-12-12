@@ -9,28 +9,18 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.prop.TableDrivenPropertyChecks
 import skunk._
 import cats.effect.unsafe.implicits.global
-import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock.{okJson, post, urlEqualTo}
-import org.scalatest.BeforeAndAfterAll
 import skunk.codec.all.text
 import skunk.implicits._
-import uk.gov.nationalarchives.Lambda.StatusResult
+import uk.gov.nationalarchives.Lambda.{Status, StatusResult}
 import io.circe.generic.auto._
 import io.circe.parser.decode
+
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import scala.io.Source
 
-class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoSugar with TestContainerForAll with BeforeAndAfterAll {
+class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoSugar with TestContainerForAll {
   val Success = "Success"
   val Failed = "Failed"
-
-  val ssmWiremock = new WireMockServer(9001)
-
-  override def beforeAll(): Unit = {
-    val response = """{"Parameter": {"Value": "localhost"}}"""
-    ssmWiremock.stubFor(post(urlEqualTo("/")).willReturn(okJson(response)))
-    ssmWiremock.start()
-  }
 
   override val containerDef: ContainerDef = PostgreSQLContainer.Def(
     databaseName = "consignmentapi",
@@ -58,7 +48,7 @@ class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoS
     super.afterContainersStart(containers)
   }
 
-  def getStatuses(inputReplacements: Map[String, String], container: PostgreSQLContainer) = {
+  def getStatuses(inputReplacements: Map[String, String], container: PostgreSQLContainer): List[Status] = {
     System.setProperty("db-port", container.mappedPort(5432).toString)
     val inputString = Source.fromResource("input.json").mkString
     val input = inputReplacements.foldLeft(inputString)((ir, r) => {

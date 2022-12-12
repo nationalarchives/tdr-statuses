@@ -18,5 +18,4 @@ object Dependencies {
   lazy val testContainersScala = "com.dimafeng" %% "testcontainers-scala-scalatest" % testContainersVersion
   lazy val testContainersPostgres = "com.dimafeng" %% "testcontainers-scala-postgresql" % testContainersVersion
   lazy val mockito = "org.mockito" %% "mockito-scala" % "1.17.12"
-  lazy val wiremock = "com.github.tomakehurst" % "wiremock" % "2.27.2"
 }

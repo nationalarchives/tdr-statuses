@@ -19,8 +19,7 @@ lazy val root = (project in file("."))
       mockito % Test,
       scalaTest % Test,
       testContainersScala % Test,
-      testContainersPostgres % Test,
-      wiremock % Test
+      testContainersPostgres % Test
     ),
     assembly / assemblyJarName := "statuses.jar"
   )
