@@ -24,6 +24,11 @@ lazy val root = (project in file("."))
     assembly / assemblyJarName := "statuses.jar"
   )
 
+(assembly / assemblyMergeStrategy) := {
+  case PathList("META-INF", xs@_*) => MergeStrategy.discard
+  case _ => MergeStrategy.first
+}
+
 Test / fork := true
 Test / javaOptions += s"-Dconfig.file=${sourceDirectory.value}/test/resources/application.conf"
 Test / envVars := Map("AWS_ACCESS_KEY_ID" -> "test", "AWS_SECRET_ACCESS_KEY" -> "test", "AWS_REGION" -> "eu-west-2")
