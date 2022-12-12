@@ -1,19 +1,18 @@
 package uk.gov.nationalarchives
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import com.dimafeng.testcontainers.scalatest.TestContainerForAll
 import com.dimafeng.testcontainers.{ContainerDef, PostgreSQLContainer}
-import natchez.Trace.Implicits.noop
+import doobie.Transactor
+import doobie.implicits._
+import doobie.util.transactor.Transactor.Aux
+import io.circe.generic.auto._
+import io.circe.parser.decode
 import org.mockito.MockitoSugar
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.prop.TableDrivenPropertyChecks
-import skunk._
-import cats.effect.unsafe.implicits.global
-import skunk.codec.all.text
-import skunk.implicits._
 import uk.gov.nationalarchives.Lambda.{Status, StatusResult}
-import io.circe.generic.auto._
-import io.circe.parser.decode
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import scala.io.Source
@@ -31,18 +30,21 @@ class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoS
   override def afterContainersStart(containers: containerDef.Container): Unit = {
     containers match {
       case container: PostgreSQLContainer =>
-        Session.single[IO](container.host, container.mappedPort(5432), "tdr", "consignmentapi", Some("password")).use { session =>
-          val allowedCreate: Command[Void] = sql"""CREATE TABLE public."AllowedPuids" ("PUID" text not null)""".command
-          val allowedInsert: Command[String] = sql"""INSERT INTO "AllowedPuids" SELECT $text """.command
-          val disAllowedCreate: Command[Void] = sql"""CREATE TABLE public."DisallowedPuids" ("PUID" text not null, "Reason" text not null)""".command
-          val disAllowedInsert: Command[(String, String)] = sql"""INSERT INTO "DisallowedPuids" SELECT $text, $text """.command
-          for {
-            _ <- session.execute(allowedCreate)
-            _ <- session.prepare(allowedInsert).use { pc => pc.execute("fmt/000") }
-            _ <- session.execute(disAllowedCreate)
-            _ <- session.prepare(disAllowedInsert).use { pc => pc.execute("fmt/001" ~ "Invalid") }
-          } yield ()
-        }.unsafeRunSync()
+        val jdbcUrl = s"jdbc:postgresql://localhost:${container.mappedPort(5432)}/consignmentapi"
+        val xa: Aux[IO, Unit] = Transactor.fromDriverManager[IO](
+          "org.postgresql.Driver", jdbcUrl, "tdr", "password"
+        )
+        val a = (for {
+          res1 <- sql"""CREATE TABLE public."AllowedPuids" ("PUID" text not null)""".update.run.transact(xa)
+          res2 <- sql"""INSERT INTO "AllowedPuids" ("PUID") VALUES ('fmt/000') """.update.run.transact(xa)
+          res3 <- sql"""CREATE TABLE public."DisallowedPuids" ("PUID" text not null, "Reason" text not null)""".update.run.transact(xa)
+          res4 <- sql"""INSERT INTO "DisallowedPuids" ("PUID", "Reason") VALUES ('fmt/001', 'Invalid') """.update.run.transact(xa)
+        } yield List(res1, res2, res3, res4)).unsafeRunSync()
+        a
+
+
+
+
 
     }
     super.afterContainersStart(containers)

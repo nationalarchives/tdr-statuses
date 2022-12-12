@@ -97,4 +97,4 @@ The lambda processes the following file statuses for each file.
 
 ## Running locally
 There is a `LambdaRunner` class which can be run. You can change the input json as necessary.
-You will need to set the `DB_PASSWORD` environment to the password of your local database. 
+You will need to set the `DB_PASSWORD` environment to the password of your local database and `USER_NAME` to the username. 

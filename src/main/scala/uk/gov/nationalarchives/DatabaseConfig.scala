@@ -50,13 +50,13 @@ class DatabaseConfig[F[_]: Monad](config: Config) {
     for {
       host <- config.urlPath.map(getSsmParameter).getOrElse(config.host.pure[F])
       password <- getPassword(host, config)
-    } yield DatabaseCredentials(config.username, password, host, config.dbPort)
+    } yield DatabaseCredentials(config.username, password, host, config.dbPort, config.useIamAuth.getOrElse(false))
   }
 
 
 }
 object DatabaseConfig {
-  case class DatabaseCredentials(username: String, password: String, host: String, port: Int)
+  case class DatabaseCredentials(username: String, password: String, host: String, port: Int, useIamAuth: Boolean)
 
   case class Config(username: String, urlPath: Option[String], ssmEndpoint: String, dbPort: Int, useIamAuth: Option[Boolean], password: Option[String], host: String)
 
