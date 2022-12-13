@@ -30,7 +30,8 @@ class Lambda {
     clientChecksum <- processor.clientChecksum()
     clientFilePath <- processor.clientFilePath()
     redactedStatus <- processor.redactedStatus()
-  } yield ffid ::: av ::: checksumMatch ::: serverChecksum ::: clientChecksum ::: clientFilePath ::: redactedStatus
+    serverFFID <- processor.serverFFID()
+  } yield ffid ::: av ::: checksumMatch ::: serverChecksum ::: clientChecksum ::: clientFilePath ::: redactedStatus ::: serverFFID
 
   def run(inputStream: InputStream, outputStream: OutputStream): Unit = {
     val inputString = Source.fromInputStream(inputStream).mkString
@@ -42,6 +43,7 @@ class Lambda {
     outputStream.write(result.unsafeRunSync().asJson.printWith(Printer.noSpaces).getBytes())
   }
 }
+
 object Lambda {
   case class StatusResult(statuses: List[Status])
 
@@ -57,7 +59,9 @@ object Lambda {
 
   case class FileCheckResults(antivirus: List[Antivirus], checksum: List[ChecksumResult], fileFormat: List[FFID])
 
-  case class File(fileId: UUID,
+  case class File(
+                  consignmentId: UUID,
+                  fileId: UUID,
                   consignmentType: String,
                   fileSize: String,
                   clientChecksum: String,

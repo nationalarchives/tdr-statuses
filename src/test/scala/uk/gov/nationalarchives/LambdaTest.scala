@@ -21,7 +21,7 @@ class LambdaTest extends TestUtils {
     val replacementsMap = Map("Antivirus" -> "", "ClientChecksum" -> "abc", "ServerChecksum" -> "abc", "FileSize" -> "1")
     val statuses: List[Status] = getStatuses(replacementsMap, container)
 
-    statuses.size should equal(6)
+    statuses.size should equal(7)
 
     def filterStatus(name: String): List[String] = statuses.filter(_.statusName == name).map(_.statusValue)
 
@@ -37,9 +37,9 @@ class LambdaTest extends TestUtils {
     ("consignmentType", "puid", "fileSize", "result"),
     ("judgment", "fmt/111", "1", "NonJudgmentFormat"),
     ("judgment", "fmt/000", "1", "Success"),
-    ("standard", "fmt/002", "1", "Success"),
+    ("standard", "fmt/002", "1", "Inactive"),
     ("standard", "fmt/001", "1", "Invalid"),
-    ("standard", "fmt/002", "0", "ZeroByteFile")
+    ("standard", "fmt/003", "0", "ZeroByteFile")
   )
 
   forAll(ffidResults)((consignmentType, puid, fileSize, expectedStatus) => {
@@ -96,7 +96,8 @@ class LambdaTest extends TestUtils {
     }
   })
 
-  "run" should "return the correct redacted statuses for redacted files" in {
+  "run" should "return the correct redacted statuses for redacted files" in withContainers { case container: PostgreSQLContainer =>
+    System.setProperty("db-port", container.mappedPort(5432).toString)
     val input = decode[Input](Source.fromResource("input.json").mkString).toOption.get
     val filePair = RedactedFiles(UUID.randomUUID())
     val errors = RedactedErrors(UUID.randomUUID(), "TestFailureReason")
@@ -113,4 +114,33 @@ class LambdaTest extends TestUtils {
     redactionStatuses.count(_.statusValue == Success) should equal(1)
     redactionStatuses.count(_.statusValue == "TestFailureReason") should equal(1)
   }
+
+  val serverFFIDResults: TableFor2[List[String], String] = Table(
+    ("puids", "expectedResult"),
+    (List("fmt/000", "fmt/002"), "Completed"),
+    (List("fmt/000"), "Completed"),
+    (List("fmt/000", "fmt/001"), "CompletedWithIssues"),
+    (List("fmt/001"), "CompletedWithIssues")
+  )
+
+  forAll(serverFFIDResults)((puids, expectedResult) => {
+    "run" should s"return the expected consignment status $expectedResult for puids ${puids.mkString(" ")}" in withContainers { case container: PostgreSQLContainer =>
+      System.setProperty("db-port", container.mappedPort(5432).toString)
+      val consignmentId = UUID.randomUUID()
+      val files = puids.map(puid => {
+        val fileChecks = FileCheckResults(Nil, Nil, FFID(Matches(Option(puid)) :: Nil) :: Nil)
+        File(consignmentId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", fileChecks)
+      })
+      val inputString = Input(files, RedactedResult(Nil, Nil)).asJson.printWith(Printer.noSpaces)
+      val input = new ByteArrayInputStream(inputString.getBytes())
+      val output = new ByteArrayOutputStream()
+      new Lambda().run(input, output)
+
+      val result = decode[StatusResult](output.toByteArray.map(_.toChar).mkString).toOption.get
+      val serverFFIDStatuses = result.statuses.filter(_.statusName == "ServerFFID")
+      serverFFIDStatuses.size should equal(1)
+      serverFFIDStatuses.head.id should equal(consignmentId)
+      serverFFIDStatuses.head.statusValue should equal(expectedResult)
+    }
+  })
 }

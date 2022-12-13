@@ -7,6 +7,7 @@ object LambdaRunner extends App {
     """{
       |  "results": [
       |    {
+      |      "consignmentId": "68c11ad6-f7e2-4506-833a-a28426aecbdd",
       |      "fileId": "20d80488-d247-47cf-8687-be26de2558b5",
       |      "originalPath": "smallfile/subfolder/subfolder-nested/subfolder-nested-1.txt",
       |      "fileSize": "2",

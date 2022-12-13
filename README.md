@@ -65,7 +65,7 @@ The lambda processes the following file statuses for each file.
 
 ### FFID
 * If the consignment type is judgment and the puid is not in the AllowedPuids table then `NonJudgmentFormat`.
-* If the consignment type is standard and the puid is in the DisallowedPuids table then get the status from the `Reason`  column.
+* If the consignment type is standard and the puid is in the DisallowedPuids table and is active then get the status from the `Reason` column.
 * If the file size is zero then `ZeroByteFile`.
 * Otherwise `Success`.
 

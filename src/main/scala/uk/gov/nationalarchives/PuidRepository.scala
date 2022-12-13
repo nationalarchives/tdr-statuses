@@ -6,31 +6,32 @@ import doobie.Transactor
 import doobie.implicits._
 import doobie.util.transactor.Transactor.Aux
 import uk.gov.nationalarchives.DatabaseConfig.DatabaseCredentials
-import uk.gov.nationalarchives.PuidRepository.{AllPuidInformation, PuidInformation}
+import uk.gov.nationalarchives.PuidRepository.{AllPuidInformation, AllowedPuids, DisallowedPuids}
 
 class PuidRepository[F[_]: Async](xa: Aux[F, Unit]) {
 
-  private def allowedPuids(): F[List[PuidInformation]] = {
-    val query = sql"""SELECT "PUID", 'NonJudgmentFormat'::text FROM "AllowedPuids"; """.query[PuidInformation].to[List]
+  private def allowedPuids(): F[List[AllowedPuids]] = {
+    val query = sql"""SELECT "PUID" FROM "AllowedPuids"; """.query[AllowedPuids].to[List]
     query.transact(xa)
   }
 
-  private def disAllowedPuids(): F[List[PuidInformation]] = {
-    val query = sql"""SELECT "PUID", "Reason" FROM "DisallowedPuids"; """.query[PuidInformation].to[List]
+  private def disallowedPuids(): F[List[DisallowedPuids]] = {
+    val query = sql"""SELECT "PUID", "Reason", "Active" FROM "DisallowedPuids"; """.query[DisallowedPuids].to[List]
     query.transact(xa)
   }
 
   def allPuids: F[AllPuidInformation] = for {
     allowedPuids <- allowedPuids()
-    disallowedPuids <- disAllowedPuids()
+    disallowedPuids <- disallowedPuids()
   } yield AllPuidInformation(allowedPuids, disallowedPuids)
 
 }
 
 object PuidRepository {
-  case class AllPuidInformation(allowedPuids: List[PuidInformation], disallowedPuids: List[PuidInformation])
+  case class AllPuidInformation(allowedPuids: List[AllowedPuids], disallowedPuids: List[DisallowedPuids])
 
-  case class PuidInformation(puid: String, reason: String)
+  case class DisallowedPuids(puid: String, reason: String, active: Boolean)
+  case class AllowedPuids(puid: String)
 
   def apply[F[_] : Async](credentials: DatabaseCredentials): PuidRepository[F] = {
     val suffix = if(credentials.useIamAuth) {

@@ -1,4 +1,4 @@
-name: TDR Deploy Redacted Files Lambda
+name: TDR Deploy Statuses Lambda
 on:
   workflow_dispatch:
     inputs:

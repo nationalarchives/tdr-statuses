@@ -34,18 +34,12 @@ class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoS
         val xa: Aux[IO, Unit] = Transactor.fromDriverManager[IO](
           "org.postgresql.Driver", jdbcUrl, "tdr", "password"
         )
-        val a = (for {
+        (for {
           res1 <- sql"""CREATE TABLE public."AllowedPuids" ("PUID" text not null)""".update.run.transact(xa)
           res2 <- sql"""INSERT INTO "AllowedPuids" ("PUID") VALUES ('fmt/000') """.update.run.transact(xa)
-          res3 <- sql"""CREATE TABLE public."DisallowedPuids" ("PUID" text not null, "Reason" text not null)""".update.run.transact(xa)
-          res4 <- sql"""INSERT INTO "DisallowedPuids" ("PUID", "Reason") VALUES ('fmt/001', 'Invalid') """.update.run.transact(xa)
+          res3 <- sql"""CREATE TABLE public."DisallowedPuids" ("PUID" text not null, "Reason" text not null, "Active" boolean not null default true)""".update.run.transact(xa)
+          res4 <- sql"""INSERT INTO "DisallowedPuids" ("PUID", "Reason", "Active") VALUES ('fmt/001', 'Invalid', true), ('fmt/002', 'Inactive', false) """.update.run.transact(xa)
         } yield List(res1, res2, res3, res4)).unsafeRunSync()
-        a
-
-
-
-
-
     }
     super.afterContainersStart(containers)
   }
@@ -67,5 +61,4 @@ class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoS
     val statuses = getStatuses(inputReplacements, container)
     statuses.filter(_.statusName == statusName).map(_.statusValue).head
   }
-
 }
