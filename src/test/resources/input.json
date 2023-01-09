@@ -1,0 +1,52 @@
+{
+  "results": [
+    {
+      "fileId": "20d80488-d247-47cf-8687-be26de2558b5",
+      "originalPath": "{ClientFilePath}",
+      "fileSize": "{FileSize}",
+      "clientChecksum": "{ClientChecksum}",
+      "consignmentId": "cedba409-c806-439f-8982-943afb03c85a",
+      "consignmentType": "{ConsignmentType}",
+      "userId": "030cf12c-8d5d-46b9-b86a-38e0920d0e1a",
+      "fileCheckResults": {
+        "antivirus": [
+          {
+            "software": "yara",
+            "softwareVersion": "4.2.0",
+            "databaseVersion": "$LATEST",
+            "result": "{Antivirus}",
+            "datetime": 1670411830303,
+            "fileId": "20d80488-d247-47cf-8687-be26de2558b5"
+          }
+        ],
+        "checksum": [
+          {
+            "fileId": "20d80488-d247-47cf-8687-be26de2558b5",
+            "sha256Checksum": "{ServerChecksum}"
+          }
+        ],
+        "fileFormat": [
+          {
+            "fileId": "20d80488-d247-47cf-8687-be26de2558b5",
+            "software": "Droid",
+            "softwareVersion": "6.6.0-rc2",
+            "binarySignatureFileVersion": "109",
+            "containerSignatureFileVersion": "20221102",
+            "method": "pronom",
+            "matches": [
+              {
+                "extension": "txt",
+                "identificationBasis": "Extension",
+                "puid": "{FFID}"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "redactedResults": {
+    "redactedFiles": [],
+    "errors": []
+  }
+}
