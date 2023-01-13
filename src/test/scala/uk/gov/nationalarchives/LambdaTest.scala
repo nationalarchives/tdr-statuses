@@ -21,7 +21,7 @@ class LambdaTest extends TestUtils {
     val replacementsMap = Map("Antivirus" -> "", "ClientChecksum" -> "abc", "ServerChecksum" -> "abc", "FileSize" -> "1")
     val statuses: List[Status] = getStatuses(replacementsMap, container)
 
-    statuses.size should equal(8)
+    statuses.size should equal(9)
 
     def filterStatus(name: String): List[String] = statuses.filter(_.statusName == name).map(_.statusValue)
 
