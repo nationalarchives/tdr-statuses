@@ -6,7 +6,7 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 import org.scalatest.matchers.should.Matchers._
-import org.scalatest.prop.{TableFor2, TableFor3, TableFor4}
+import org.scalatest.prop.{TableFor2, TableFor3, TableFor4, TableFor5}
 import uk.gov.nationalarchives.Lambda._
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
@@ -21,7 +21,7 @@ class LambdaTest extends TestUtils {
     val replacementsMap = Map("Antivirus" -> "", "ClientChecksum" -> "abc", "ServerChecksum" -> "abc", "FileSize" -> "1")
     val statuses: List[Status] = getStatuses(replacementsMap, container)
 
-    statuses.size should equal(7)
+    statuses.size should equal(8)
 
     def filterStatus(name: String): List[String] = statuses.filter(_.statusName == name).map(_.statusValue)
 
@@ -141,6 +141,31 @@ class LambdaTest extends TestUtils {
       serverFFIDStatuses.size should equal(1)
       serverFFIDStatuses.head.id should equal(consignmentId)
       serverFFIDStatuses.head.statusValue should equal(expectedResult)
+    }
+  })
+
+  val clientChecksResults: TableFor5[String, String, String, String, String] = Table(
+    ("clientChecksum", "clientFilePath", "ffid", "fileSize", "expectedStatus"),
+    ("", "path", "fmt/000", "1", "CompletedWithIssues"),
+    ("checksum", "", "fmt/000", "1", "CompletedWithIssues"),
+    ("", "", "fmt/001", "1", "CompletedWithIssues"),
+    ("checksum", "path", "fmt/000", "0", "CompletedWithIssues"),
+    ("checksum", "path", "fmt/001", "1", "Completed"),
+    ("checksum", "path", "fmt/000", "1", "Completed")
+  )
+
+  forAll(clientChecksResults)((clientChecksum, clientFilePath, ffid, fileSize, expectedStatus) => {
+    "run" should s"return $expectedStatus for $clientChecksum, $clientFilePath, $ffid" in withContainers { case container: PostgreSQLContainer =>
+      System.setProperty("db-port", container.mappedPort(5432).toString)
+      val inputReplacements = Map(
+        "ClientChecksum" -> clientChecksum,
+        "ClientFilePath" -> clientFilePath,
+        "FFID" -> ffid,
+        "ConsignmentType" -> "standard",
+        "FileSize" -> fileSize
+      )
+      val status = getStatus(inputReplacements, container, "ClientChecks")
+      status should equal(expectedStatus)
     }
   })
 }

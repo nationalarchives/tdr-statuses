@@ -31,7 +31,8 @@ class Lambda {
     clientFilePath <- processor.clientFilePath()
     redactedStatus <- processor.redactedStatus()
     serverFFID <- processor.serverFFID()
-  } yield ffid ::: av ::: checksumMatch ::: serverChecksum ::: clientChecksum ::: clientFilePath ::: redactedStatus ::: serverFFID
+    clientChecks <- processor.clientChecks()
+  } yield ffid ::: av ::: checksumMatch ::: serverChecksum ::: clientChecksum ::: clientFilePath ::: redactedStatus ::: serverFFID ::: clientChecks
 
   def run(inputStream: InputStream, outputStream: OutputStream): Unit = {
     val inputString = Source.fromInputStream(inputStream).mkString

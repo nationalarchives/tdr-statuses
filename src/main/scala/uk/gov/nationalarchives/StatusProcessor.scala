@@ -5,6 +5,7 @@ import cats.implicits._
 import uk.gov.nationalarchives.Lambda.{File, Input, Status}
 import uk.gov.nationalarchives.PuidRepository.AllPuidInformation
 
+import java.util.UUID
 import scala.util.Try
 
 class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInformation) {
@@ -25,6 +26,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
   private val ServerFFID = "ServerFFID"
   private val CompletedWithIssues = "CompletedWithIssues"
   private val Completed = "Completed"
+  private val ClientChecks = "ClientChecks"
 
   def antivirus(): F[List[Status]] = {
     for {
@@ -101,6 +103,26 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
         }
         Status(i.consignmentId, ConsignmentType, ServerFFID, statusValue)
       }).toList
+    }
+  }
+
+  def clientChecks(): F[List[Status]] = {
+    for {
+      ffid <- ffid()
+      clientChecksum <- clientChecksum()
+      clientFilePath <- clientFilePath()
+    } yield {
+      val allStatuses = ffid ++ clientChecksum ++ clientFilePath
+      val failedIds = allStatuses.filter(s => {
+        if(s.statusName == FFIDStatus) {
+          s.statusValue == ZeroByteFile
+        } else {
+          s.statusValue != Success
+        }
+      }).map(_.id).toSet
+      val successfulIds = allStatuses.filter(_.statusValue == Success).map(_.id).toSet
+      (failedIds.map(id => Status(id, FileType, ClientChecks, CompletedWithIssues)) ++
+        successfulIds.map(id => Status(id, FileType, ClientChecks, Completed))).toList
     }
   }
 
