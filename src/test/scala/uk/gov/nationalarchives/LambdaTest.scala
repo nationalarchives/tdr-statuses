@@ -144,7 +144,7 @@ class LambdaTest extends TestUtils {
     }
   })
 
-  val clientChecksResults: TableFor5[String, String, String, String, String] = Table(
+  val fileClientChecksResults: TableFor5[String, String, String, String, String] = Table(
     ("clientChecksum", "clientFilePath", "ffid", "fileSize", "expectedStatus"),
     ("", "path", "fmt/000", "1", "CompletedWithIssues"),
     ("checksum", "", "fmt/000", "1", "CompletedWithIssues"),
@@ -154,7 +154,7 @@ class LambdaTest extends TestUtils {
     ("checksum", "path", "fmt/000", "1", "Completed")
   )
 
-  forAll(clientChecksResults)((clientChecksum, clientFilePath, ffid, fileSize, expectedStatus) => {
+  forAll(fileClientChecksResults)((clientChecksum, clientFilePath, ffid, fileSize, expectedStatus) => {
     "run" should s"return $expectedStatus for $clientChecksum, $clientFilePath, $ffid" in withContainers { case container: PostgreSQLContainer =>
       System.setProperty("db-port", container.mappedPort(5432).toString)
       val inputReplacements = Map(
@@ -166,6 +166,35 @@ class LambdaTest extends TestUtils {
       )
       val status = getStatus(inputReplacements, container, "ClientChecks")
       status should equal(expectedStatus)
+    }
+  })
+
+  val consignmentClientChecksResults: TableFor2[List[String], String] = Table(
+    ("fileClientChecks", "expectedResult"),
+    (List("Completed", "CompletedWithIssues"), "CompletedWithIssues"),
+    (List("CompletedWithIssues", "CompletedWithIssues"), "CompletedWithIssues"),
+    (List("Completed", "Completed"), "Completed"),
+    (List("Completed"), "Completed"),
+  )
+
+  forAll(consignmentClientChecksResults)((fileClientChecks, expectedResult) => {
+    "run" should s"return the expected consignment status $expectedResult for client checks ${fileClientChecks.mkString(" ")}" in withContainers { case container: PostgreSQLContainer =>
+      System.setProperty("db-port", container.mappedPort(5432).toString)
+      val consignmentId = UUID.randomUUID()
+      val files: List[File] = fileClientChecks map {
+        case "Completed" => File(consignmentId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", FileCheckResults(Nil, Nil, Nil))
+        case "CompletedWithIssues" => File(consignmentId, UUID.randomUUID(), "standard", "0", "", "originalPath", FileCheckResults(Nil, Nil, Nil))
+      }
+      val inputString = Input(files, RedactedResult(Nil, Nil)).asJson.printWith(Printer.noSpaces)
+      val input = new ByteArrayInputStream(inputString.getBytes())
+      val output = new ByteArrayOutputStream()
+      new Lambda().run(input, output)
+
+      val result = decode[StatusResult](output.toByteArray.map(_.toChar).mkString).toOption.get
+      val clientChecksStatuses = result.statuses.filter(s => s.statusName == "ClientChecks" && s.statusType == "Consignment")
+      clientChecksStatuses.size should equal(1)
+      clientChecksStatuses.head.id should equal(consignmentId)
+      clientChecksStatuses.head.statusValue should equal(expectedResult)
     }
   })
 }

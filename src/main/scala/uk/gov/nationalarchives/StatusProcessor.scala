@@ -5,7 +5,6 @@ import cats.implicits._
 import uk.gov.nationalarchives.Lambda.{File, Input, Status}
 import uk.gov.nationalarchives.PuidRepository.AllPuidInformation
 
-import java.util.UUID
 import scala.util.Try
 
 class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInformation) {
@@ -106,7 +105,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
     }
   }
 
-  def clientChecks(): F[List[Status]] = {
+  def fileClientChecks(): F[List[Status]] = {
     for {
       ffid <- ffid()
       clientChecksum <- clientChecksum()
@@ -124,6 +123,15 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
       (failedIds.map(id => Status(id, FileType, ClientChecks, CompletedWithIssues)) ++
         successfulIds.map(id => Status(id, FileType, ClientChecks, Completed))).toList
     }
+  }
+
+  def consignmentClientChecks(): F[List[Status]] = {
+    fileClientChecks().map(checks => {
+      val result = checks.find(_.statusValue == CompletedWithIssues).map(_.statusValue).getOrElse(Completed)
+      input.results.headOption.map(res => {
+        Status(res.consignmentId, ConsignmentType, ClientChecks, result)
+      }).toList
+    })
   }
 
   private def statusIfEmpty(fn: File => Option[String], statusName: String): F[List[Status]] = {
