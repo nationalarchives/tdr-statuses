@@ -19,6 +19,7 @@ import scala.io.Source
 
 class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoSugar with TestContainerForAll {
   val Success = "Success"
+  val Completed = "Completed"
   val Failed = "Failed"
 
   override val containerDef: ContainerDef = PostgreSQLContainer.Def(
@@ -57,8 +58,8 @@ class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoS
     decode[StatusResult](output).getOrElse(StatusResult(Nil)).statuses
   }
 
-  def getStatus(inputReplacements: Map[String, String], container: PostgreSQLContainer, statusName: String): String = {
+  def getStatus(inputReplacements: Map[String, String], container: PostgreSQLContainer, statusName: String, statusType: String): String = {
     val statuses = getStatuses(inputReplacements, container)
-    statuses.filter(_.statusName == statusName).map(_.statusValue).head
+    statuses.filter(s => s.statusName == statusName && s.statusType == statusType).map(_.statusValue).head
   }
 }

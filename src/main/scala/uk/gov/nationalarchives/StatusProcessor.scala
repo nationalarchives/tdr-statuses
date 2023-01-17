@@ -18,6 +18,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
   private val ConsignmentType = "Consignment"
   private val Failed = "Failed"
   private val ServerChecksum = "ServerChecksum"
+  private val ServerAntivirus = "ServerAntivirus"
   private val ZeroByteFile = "ZeroByteFile"
   private val ClientChecksum = "ClientChecksum"
   private val ClientFilePath = "ClientFilePath"
@@ -76,8 +77,29 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
     }).pure[F]
   }
 
-  def serverChecksum(): F[List[Status]] =
-    statusIfEmpty(res => res.fileCheckResults.checksum.map(_.sha256Checksum).headOption, ServerChecksum)
+  def serverChecksum(): F[List[Status]] = {
+    for {
+      consignmentStatus <- clientChecksum().map(cc => {
+        val value = if (cc.exists(_.statusValue != Success)) {
+          CompletedWithIssues
+        } else {
+          Completed
+        }
+        Status(input.results.head.consignmentId, ConsignmentType, ServerChecksum, value, overwrite = true) :: Nil
+      })
+      fileStatuses <-  statusIfEmpty(res => res.fileCheckResults.checksum.map(_.sha256Checksum).headOption, ServerChecksum)
+    } yield consignmentStatus ++ fileStatuses
+
+  }
+
+  def serverAntivirus(): F[List[Status]] = antivirus().map(av => {
+    val value = if (av.exists(_.statusValue != Success)) {
+      CompletedWithIssues
+    } else {
+      Completed
+    }
+    Status(input.results.head.consignmentId, ConsignmentType, ServerAntivirus, value, overwrite = true) :: Nil
+  })
 
   def clientChecksum(): F[List[Status]] = statusIfEmpty(res => res.clientChecksum.some, ClientChecksum)
 

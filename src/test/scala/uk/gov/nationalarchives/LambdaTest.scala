@@ -21,14 +21,15 @@ class LambdaTest extends TestUtils {
     val replacementsMap = Map("Antivirus" -> "", "ClientChecksum" -> "abc", "ServerChecksum" -> "abc", "FileSize" -> "1")
     val statuses: List[Status] = getStatuses(replacementsMap, container)
 
-    statuses.size should equal(9)
+    statuses.size should equal(11)
 
     def filterStatus(name: String): List[String] = statuses.filter(_.statusName == name).map(_.statusValue)
 
     filterStatus("FFID").head should equal(Success)
     filterStatus("Antivirus").head should equal(Success)
     filterStatus("ChecksumMatch").head should equal(Success)
-    filterStatus("ServerChecksum").head should equal(Success)
+    filterStatus("ServerChecksum").head should equal(Completed)
+    filterStatus("ServerChecksum").last should equal(Success)
     filterStatus("ClientChecksum").head should equal(Success)
     filterStatus("ClientFilePath").head should equal(Success)
   }
@@ -45,7 +46,7 @@ class LambdaTest extends TestUtils {
   forAll(ffidResults)((consignmentType, puid, fileSize, expectedStatus) => {
     "run" should s"return a $expectedStatus if the $consignmentType puid is $puid and file size is $fileSize" in withContainers { case container: PostgreSQLContainer =>
       val inputReplacements = Map("ConsignmentType" -> consignmentType, "FFID" -> puid, "FileSize" -> fileSize)
-      val status = getStatus(inputReplacements, container, "FFID")
+      val status = getStatus(inputReplacements, container, "FFID", "File")
       status should equal(expectedStatus)
     }
   })
@@ -59,7 +60,7 @@ class LambdaTest extends TestUtils {
   forAll(avResults)((avResult, expectedStatus) => {
     "run" should s"return $expectedStatus if the AV result is $avResult" in withContainers { case container: PostgreSQLContainer =>
       val inputReplacements = Map("Antivirus" -> avResult)
-      val status = getStatus(inputReplacements, container, "Antivirus")
+      val status = getStatus(inputReplacements, container, "Antivirus", "File")
       status should equal(expectedStatus)
     }
   })
@@ -74,7 +75,7 @@ class LambdaTest extends TestUtils {
   forAll(checksumMatchResults)((serverChecksum, clientChecksum, expectedStatus) => {
     "run" should s"return $expectedStatus for server checksum $serverChecksum and client checksum $clientChecksum" in withContainers { case container: PostgreSQLContainer =>
       val inputReplacements = Map("ServerChecksum" -> serverChecksum, "ClientChecksum" -> clientChecksum)
-      val status = getStatus(inputReplacements, container, "ChecksumMatch")
+      val status = getStatus(inputReplacements, container, "ChecksumMatch", "File")
       status should equal(expectedStatus)
     }
   })
@@ -91,7 +92,7 @@ class LambdaTest extends TestUtils {
   forAll(emptyCheckResults)((statusName, value, expectedStatus) => {
     "run" should s"return $expectedStatus for $statusName with value $value" in withContainers { case container: PostgreSQLContainer =>
       val inputReplacements = Map(statusName -> value)
-      val status = getStatus(inputReplacements, container, statusName)
+      val status = getStatus(inputReplacements, container, statusName, "File")
       status should equal(expectedStatus)
     }
   })
@@ -144,6 +145,36 @@ class LambdaTest extends TestUtils {
     }
   })
 
+  val serverAvResults: TableFor2[List[String], String] = Table(
+    ("avResults", "expectedResult"),
+    (List("virus", ""), "CompletedWithIssues"),
+    (List("anotherVirus"), "CompletedWithIssues"),
+    (List("virus", "virus"), "CompletedWithIssues"),
+    (List("", ""), "Completed"),
+  )
+
+  forAll(serverAvResults)((avResults, expectedResult) => {
+    "run" should s"return the expected consignment status $expectedResult for av results ${avResults.mkString(" ")}" in withContainers { case container: PostgreSQLContainer =>
+      System.setProperty("db-port", container.mappedPort(5432).toString)
+      val consignmentId = UUID.randomUUID()
+      val files = avResults.map(avResult => {
+        val antivirus: Antivirus = Antivirus(avResult)
+        val fileChecks = FileCheckResults(List(antivirus), Nil, Nil)
+        File(consignmentId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", fileChecks)
+      })
+      val inputString = Input(files, RedactedResult(Nil, Nil)).asJson.printWith(Printer.noSpaces)
+      val input = new ByteArrayInputStream(inputString.getBytes())
+      val output = new ByteArrayOutputStream()
+      new Lambda().run(input, output)
+
+      val result = decode[StatusResult](output.toByteArray.map(_.toChar).mkString).toOption.get
+      val serverAVStatuses = result.statuses.filter(_.statusName == "ServerAntivirus")
+      serverAVStatuses.size should equal(1)
+      serverAVStatuses.head.id should equal(consignmentId)
+      serverAVStatuses.head.statusValue should equal(expectedResult)
+    }
+  })
+
   val fileClientChecksResults: TableFor5[String, String, String, String, String] = Table(
     ("clientChecksum", "clientFilePath", "ffid", "fileSize", "expectedStatus"),
     ("", "path", "fmt/000", "1", "CompletedWithIssues"),
@@ -164,7 +195,7 @@ class LambdaTest extends TestUtils {
         "ConsignmentType" -> "standard",
         "FileSize" -> fileSize
       )
-      val status = getStatus(inputReplacements, container, "ClientChecks")
+      val status = getStatus(inputReplacements, container, "ClientChecks", "Consignment")
       status should equal(expectedStatus)
     }
   })
