@@ -10,6 +10,8 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       awsRds,
       awsSsm,
+      awsS3,
+      backendCheckUtils,
       circeCore,
       circeParser,
       circeGeneric,
@@ -20,7 +22,8 @@ lazy val root = (project in file("."))
       mockito % Test,
       scalaTest % Test,
       testContainersScala % Test,
-      testContainersPostgres % Test
+      testContainersPostgres % Test,
+      wiremock % Test
     ),
     assembly / assemblyJarName := "statuses.jar"
   )

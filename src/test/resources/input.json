@@ -48,5 +48,8 @@
   "redactedResults": {
     "redactedFiles": [],
     "errors": []
+  },
+  "statuses": {
+    "statuses": []
   }
 }

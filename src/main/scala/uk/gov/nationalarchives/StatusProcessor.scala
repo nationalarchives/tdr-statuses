@@ -2,7 +2,7 @@ package uk.gov.nationalarchives
 
 import cats.Monad
 import cats.implicits._
-import uk.gov.nationalarchives.Lambda.{File, Input, Status}
+import uk.gov.nationalarchives.BackendCheckUtils.{File, Input, Status}
 import uk.gov.nationalarchives.PuidRepository.AllPuidInformation
 
 import scala.util.Try
@@ -56,7 +56,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
         NonJudgmentFormat
       } else if (res.consignmentType == "standard" && Try(res.fileSize.toLong).getOrElse(0L) > 0) {
         disallowedReason.getOrElse(Success)
-      } else if (res.fileSize == "0") {
+      } else if (res.fileSize == "0" && disallowedReason.contains(ZeroByteFile)) {
         ZeroByteFile
       } else {
         Success

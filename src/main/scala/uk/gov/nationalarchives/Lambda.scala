@@ -6,23 +6,23 @@ import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
-import uk.gov.nationalarchives.Lambda.{Input, StatusResult}
 
 import java.io.{InputStream, OutputStream}
-import java.util.UUID
 import scala.io.Source
+import uk.gov.nationalarchives.BackendCheckUtils._
 
 class Lambda {
 
-  private def statusProcessor(inputString: String): IO[StatusProcessor[IO]] = for {
-    input <- IO.fromEither(decode[Input](inputString))
+  private val backendChecksUtils = BackendCheckUtils(sys.env("S3_ENDPOINT"))
+
+  private def statusProcessor(input: Input): IO[StatusProcessor[IO]] = for {
     databaseConfig <- DatabaseConfig[IO]()
     credentials <- databaseConfig.credentials
     allPuids <- PuidRepository[IO](credentials).allPuids
     processor <- StatusProcessor[IO](input, allPuids)
   } yield processor
 
-  private def statusChecks(processor: StatusProcessor[IO]): IO[List[Lambda.Status]] = for {
+  private def statusChecks(processor: StatusProcessor[IO]): IO[List[Status]] = for {
     ffid <- processor.ffid()
     av <- processor.antivirus()
     checksumMatch <- processor.checksumMatch()
@@ -41,44 +41,14 @@ class Lambda {
   def run(inputStream: InputStream, outputStream: OutputStream): Unit = {
     val inputString = Source.fromInputStream(inputStream).mkString
     val result = for {
-      processor <- statusProcessor(inputString)
+      s3Input <- IO.fromEither(decode[S3Input](inputString))
+      input <- IO.fromEither(backendChecksUtils.getResultJson(s3Input.key, s3Input.bucket))
+      processor <- statusProcessor(input)
       statuses <- statusChecks(processor)
-    } yield StatusResult(statuses)
+      resultString = Input(input.results, input.redactedResults, StatusResult(statuses)).asJson.printWith(Printer.noSpaces)
+      _ <- IO.fromEither(backendChecksUtils.writeResultJson(s3Input.key, s3Input.bucket, resultString))
+    } yield s3Input
 
     outputStream.write(result.unsafeRunSync().asJson.printWith(Printer.noSpaces).getBytes())
   }
-}
-
-object Lambda {
-  case class StatusResult(statuses: List[Status])
-
-  case class Status(id: UUID, statusType: String, statusName: String, statusValue: String, overwrite: Boolean = false)
-
-  case class ChecksumResult(sha256Checksum: String)
-
-  case class Matches(puid: Option[String])
-
-  case class FFID(matches: List[Matches])
-
-  case class Antivirus(result: String)
-
-  case class FileCheckResults(antivirus: List[Antivirus], checksum: List[ChecksumResult], fileFormat: List[FFID])
-
-  case class File(
-                  consignmentId: UUID,
-                  fileId: UUID,
-                  consignmentType: String,
-                  fileSize: String,
-                  clientChecksum: String,
-                  originalPath: String,
-                  fileCheckResults: FileCheckResults
-                 )
-
-  case class RedactedResult(redactedFiles: List[RedactedFiles], errors: List[RedactedErrors])
-
-  case class RedactedErrors(fileId: UUID, cause: String)
-
-  case class RedactedFiles(redactedFileId: UUID)
-
-  case class Input(results: List[File], redactedResults: RedactedResult)
 }

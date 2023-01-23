@@ -2,18 +2,29 @@ package uk.gov.nationalarchives
 
 import com.dimafeng.testcontainers.PostgreSQLContainer
 import io.circe.Printer
+import io.circe.Printer.noSpaces
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers._
 import org.scalatest.prop.{TableFor2, TableFor3, TableFor4, TableFor5}
-import uk.gov.nationalarchives.Lambda._
+import uk.gov.nationalarchives.BackendCheckUtils._
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.UUID
 import scala.io.Source
 
-class LambdaTest extends TestUtils {
+class LambdaTest extends TestUtils with BeforeAndAfterAll {
+
+  override def beforeAll(): Unit = {
+    setupS3ForWrite()
+    wiremockS3Server.start()
+  }
+
+  override def afterAll(): Unit = {
+    wiremockS3Server.stop()
+  }
 
   override def afterContainersStart(containers: containerDef.Container): Unit = super.afterContainersStart(containers)
 
@@ -38,9 +49,9 @@ class LambdaTest extends TestUtils {
     ("consignmentType", "puid", "fileSize", "result"),
     ("judgment", "fmt/111", "1", "NonJudgmentFormat"),
     ("judgment", "fmt/000", "1", "Success"),
-    ("standard", "fmt/002", "1", "Inactive"),
+    ("standard", "fmt/002", "1", "Success"),
     ("standard", "fmt/001", "1", "Invalid"),
-    ("standard", "fmt/003", "0", "ZeroByteFile")
+    ("standard", "fmt/003", "0", "Success")
   )
 
   forAll(ffidResults)((consignmentType, puid, fileSize, expectedStatus) => {
@@ -100,16 +111,17 @@ class LambdaTest extends TestUtils {
   "run" should "return the correct redacted statuses for redacted files" in withContainers { case container: PostgreSQLContainer =>
     System.setProperty("db-port", container.mappedPort(5432).toString)
     val input = decode[Input](Source.fromResource("input.json").mkString).toOption.get
-    val filePair = RedactedFiles(UUID.randomUUID())
+    val filePair = RedactedFilePairs(UUID.randomUUID(), "original", UUID.randomUUID(), "redacted")
     val errors = RedactedErrors(UUID.randomUUID(), "TestFailureReason")
     val redactedResults = input.redactedResults
       .copy(redactedFiles = filePair :: Nil, errors = errors :: Nil)
     val inputString = input.copy(redactedResults = redactedResults).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
     val outputStream = new ByteArrayOutputStream()
 
-    new Lambda().run(new ByteArrayInputStream(inputString.getBytes()), outputStream)
+    new Lambda().run(new ByteArrayInputStream(s3Input.getBytes()), outputStream)
 
-    val result = decode[StatusResult](outputStream.toByteArray.map(_.toChar).mkString).getOrElse(StatusResult(Nil))
+    val result = getInputFromS3().statuses
     val redactionStatuses = result.statuses.filter(_.statusName == "Redaction")
     redactionStatuses.size should equal(2)
     redactionStatuses.count(_.statusValue == Success) should equal(1)
@@ -129,15 +141,17 @@ class LambdaTest extends TestUtils {
       System.setProperty("db-port", container.mappedPort(5432).toString)
       val consignmentId = UUID.randomUUID()
       val files = puids.map(puid => {
-        val fileChecks = FileCheckResults(Nil, Nil, FFID(Matches(Option(puid)) :: Nil) :: Nil)
-        File(consignmentId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", fileChecks)
+        val matches = FFIDMetadataInputMatches(Option("extension"),"identificationBasis" ,Option(puid)) :: Nil
+        val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+        File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", fileChecks)
       })
-      val inputString = Input(files, RedactedResult(Nil, Nil)).asJson.printWith(Printer.noSpaces)
-      val input = new ByteArrayInputStream(inputString.getBytes())
+      val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+      val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+      val input = new ByteArrayInputStream(s3Input.getBytes())
       val output = new ByteArrayOutputStream()
       new Lambda().run(input, output)
 
-      val result = decode[StatusResult](output.toByteArray.map(_.toChar).mkString).toOption.get
+      val result = getInputFromS3().statuses
       val serverFFIDStatuses = result.statuses.filter(_.statusName == "ServerFFID")
       serverFFIDStatuses.size should equal(1)
       serverFFIDStatuses.head.id should equal(consignmentId)
@@ -158,16 +172,17 @@ class LambdaTest extends TestUtils {
       System.setProperty("db-port", container.mappedPort(5432).toString)
       val consignmentId = UUID.randomUUID()
       val files = avResults.map(avResult => {
-        val antivirus: Antivirus = Antivirus(avResult)
+        val antivirus: Antivirus = Antivirus(UUID.randomUUID(), "software", "softwareVersion", "databaseVersion", avResult, 1)
         val fileChecks = FileCheckResults(List(antivirus), Nil, Nil)
-        File(consignmentId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", fileChecks)
+        File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", fileChecks)
       })
-      val inputString = Input(files, RedactedResult(Nil, Nil)).asJson.printWith(Printer.noSpaces)
-      val input = new ByteArrayInputStream(inputString.getBytes())
+      val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+      val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+      val input = new ByteArrayInputStream(s3Input.getBytes())
       val output = new ByteArrayOutputStream()
       new Lambda().run(input, output)
 
-      val result = decode[StatusResult](output.toByteArray.map(_.toChar).mkString).toOption.get
+      val result = getInputFromS3().statuses
       val serverAVStatuses = result.statuses.filter(_.statusName == "ServerAntivirus")
       serverAVStatuses.size should equal(1)
       serverAVStatuses.head.id should equal(consignmentId)
@@ -180,7 +195,6 @@ class LambdaTest extends TestUtils {
     ("", "path", "fmt/000", "1", "CompletedWithIssues"),
     ("checksum", "", "fmt/000", "1", "CompletedWithIssues"),
     ("", "", "fmt/001", "1", "CompletedWithIssues"),
-    ("checksum", "path", "fmt/000", "0", "CompletedWithIssues"),
     ("checksum", "path", "fmt/001", "1", "Completed"),
     ("checksum", "path", "fmt/000", "1", "Completed")
   )
@@ -213,15 +227,16 @@ class LambdaTest extends TestUtils {
       System.setProperty("db-port", container.mappedPort(5432).toString)
       val consignmentId = UUID.randomUUID()
       val files: List[File] = fileClientChecks map {
-        case "Completed" => File(consignmentId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", FileCheckResults(Nil, Nil, Nil))
-        case "CompletedWithIssues" => File(consignmentId, UUID.randomUUID(), "standard", "0", "", "originalPath", FileCheckResults(Nil, Nil, Nil))
+        case "Completed" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", FileCheckResults(Nil, Nil, Nil))
+        case "CompletedWithIssues" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "0", "", "originalPath", FileCheckResults(Nil, Nil, Nil))
       }
-      val inputString = Input(files, RedactedResult(Nil, Nil)).asJson.printWith(Printer.noSpaces)
-      val input = new ByteArrayInputStream(inputString.getBytes())
+      val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+      val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+      val input = new ByteArrayInputStream(s3Input.getBytes())
       val output = new ByteArrayOutputStream()
       new Lambda().run(input, output)
 
-      val result = decode[StatusResult](output.toByteArray.map(_.toChar).mkString).toOption.get
+      val result = getInputFromS3().statuses
       val clientChecksStatuses = result.statuses.filter(s => s.statusName == "ClientChecks" && s.statusType == "Consignment")
       clientChecksStatuses.size should equal(1)
       clientChecksStatuses.head.id should equal(consignmentId)
