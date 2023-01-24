@@ -2,7 +2,7 @@ package uk.gov.nationalarchives
 
 import cats.Monad
 import cats.implicits._
-import uk.gov.nationalarchives.Lambda.{File, Input, Status}
+import uk.gov.nationalarchives.BackendCheckUtils.{File, Input, Status}
 import uk.gov.nationalarchives.PuidRepository.AllPuidInformation
 
 import scala.util.Try
@@ -48,13 +48,15 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
       matches <- ffid.matches
     } yield {
       val puidMatch = matches.puid.getOrElse("")
-      val disallowedReason = allPuidInformation.disallowedPuids.find(_.puid == puidMatch).map(_.reason)
+      val disallowedReason = allPuidInformation.disallowedPuids
+        .filter(_.active)
+        .find(_.puid == puidMatch).map(_.reason)
       val judgmentDisAllowedPuid = !allPuidInformation.allowedPuids.map(_.puid).contains(puidMatch)
       val reason = if (res.consignmentType == "judgment" && judgmentDisAllowedPuid) {
         NonJudgmentFormat
       } else if (res.consignmentType == "standard" && Try(res.fileSize.toLong).getOrElse(0L) > 0) {
         disallowedReason.getOrElse(Success)
-      } else if (res.fileSize == "0") {
+      } else if (res.fileSize == "0" && disallowedReason.contains(ZeroByteFile)) {
         ZeroByteFile
       } else {
         Success
@@ -122,7 +124,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
         } else {
           Completed
         }
-        Status(i.consignmentId, ConsignmentType, ServerFFID, statusValue)
+        Status(i.consignmentId, ConsignmentType, ServerFFID, statusValue, overwrite = true)
       }).toList
     }
   }
@@ -151,7 +153,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
     fileClientChecks().map(checks => {
       val result = checks.find(_.statusValue == CompletedWithIssues).map(_.statusValue).getOrElse(Completed)
       input.results.headOption.map(res => {
-        Status(res.consignmentId, ConsignmentType, ClientChecks, result)
+        Status(res.consignmentId, ConsignmentType, ClientChecks, result, overwrite = true)
       }).toList
     })
   }

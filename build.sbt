@@ -10,6 +10,8 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       awsRds,
       awsSsm,
+      awsS3,
+      backendCheckUtils,
       circeCore,
       circeParser,
       circeGeneric,
@@ -20,7 +22,8 @@ lazy val root = (project in file("."))
       mockito % Test,
       scalaTest % Test,
       testContainersScala % Test,
-      testContainersPostgres % Test
+      testContainersPostgres % Test,
+      wiremock % Test
     ),
     assembly / assemblyJarName := "statuses.jar"
   )
@@ -32,4 +35,6 @@ lazy val root = (project in file("."))
 
 Test / fork := true
 Test / javaOptions += s"-Dconfig.file=${sourceDirectory.value}/test/resources/application.conf"
-Test / envVars := Map("AWS_ACCESS_KEY_ID" -> "test", "AWS_SECRET_ACCESS_KEY" -> "test", "AWS_REGION" -> "eu-west-2")
+(Test / fork) := true
+(Test / javaOptions) += s"-Dconfig.file=${sourceDirectory.value}/test/resources/application.conf"
+(Test / envVars) := Map("AWS_ACCESS_KEY_ID" -> "test", "AWS_SECRET_ACCESS_KEY" -> "test", "S3_ENDPOINT" -> "http://localhost:9005")

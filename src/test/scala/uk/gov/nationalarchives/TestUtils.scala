@@ -4,17 +4,23 @@ import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.dimafeng.testcontainers.scalatest.TestContainerForAll
 import com.dimafeng.testcontainers.{ContainerDef, PostgreSQLContainer}
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock.{anyUrl, get, ok, put, urlEqualTo}
+import com.github.tomakehurst.wiremock.http.RequestMethod
 import doobie.Transactor
 import doobie.implicits._
 import doobie.util.transactor.Transactor.Aux
 import io.circe.generic.auto._
 import io.circe.parser.decode
+import io.circe.syntax._
+import io.circe.Printer.noSpaces
 import org.mockito.MockitoSugar
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.prop.TableDrivenPropertyChecks
-import uk.gov.nationalarchives.Lambda.{Status, StatusResult}
+import uk.gov.nationalarchives.BackendCheckUtils._
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import scala.jdk.CollectionConverters._
 import scala.io.Source
 
 class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoSugar with TestContainerForAll {
@@ -27,6 +33,18 @@ class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoS
     username = "tdr",
     password = "password"
   )
+
+  val wiremockS3Server = new WireMockServer(9005)
+
+  def setupS3ForWrite(): Unit = {
+    wiremockS3Server.stubFor(put(anyUrl()).willReturn(ok()))
+  }
+
+  def putJsonFile(s3Input: S3Input, inputJson: String): S3Input = {
+    wiremockS3Server
+      .stubFor(get(urlEqualTo(s"/${s3Input.bucket}/${s3Input.key}")).willReturn(ok(inputJson)))
+    s3Input
+  }
 
   override def afterContainersStart(containers: containerDef.Container): Unit = {
     containers match {
@@ -45,17 +63,23 @@ class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoS
     super.afterContainersStart(containers)
   }
 
+  def getInputFromS3(): Input = wiremockS3Server.getAllServeEvents.asScala.find(_.getRequest.getMethod == RequestMethod.PUT)
+    .flatMap(ev => {
+      val bodyString = ev.getRequest.getBodyAsString.split("\r\n")(1)
+      decode[Input](bodyString).toOption
+    }).get
+
   def getStatuses(inputReplacements: Map[String, String], container: PostgreSQLContainer): List[Status] = {
     System.setProperty("db-port", container.mappedPort(5432).toString)
     val inputString = Source.fromResource("input.json").mkString
     val input = inputReplacements.foldLeft(inputString)((ir, r) => {
       ir.replace(s"{${r._1}}", r._2)
     })
-    val in = new ByteArrayInputStream(input.getBytes())
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), input).asJson.printWith(noSpaces)
+    val in = new ByteArrayInputStream(s3Input.getBytes())
     val out = new ByteArrayOutputStream()
     new Lambda().run(in, out)
-    val output = out.toByteArray.map(_.toChar).mkString
-    decode[StatusResult](output).getOrElse(StatusResult(Nil)).statuses
+    getInputFromS3().statuses.statuses
   }
 
   def getStatus(inputReplacements: Map[String, String], container: PostgreSQLContainer, statusName: String, statusType: String): String = {
