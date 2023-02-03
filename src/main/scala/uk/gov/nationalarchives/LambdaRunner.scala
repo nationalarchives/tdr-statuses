@@ -5,7 +5,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 object LambdaRunner extends App {
   private val body =
     """{
-      |  "key": "a4c0e084-7562-46dd-9724-92ac9b64d149/d5cd3fb2-4869-4d28-9537-4655486a8a2d/results.json",
+      |  "key": "19286aee-5a39-4f11-bf35-738e22e553c3/3e0cf5f5-4630-45b7-98f8-a559ac324ce0/results.json",
       |  "bucket": "tdr-backend-checks-intg"
       |}
       |""".stripMargin

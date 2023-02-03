@@ -45,21 +45,18 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
     for {
       res <- input.results
       ffid <- res.fileCheckResults.fileFormat
-      matches <- ffid.matches
     } yield {
-      val puidMatch = matches.puid.getOrElse("")
+      val puidMatches = ffid.matches.map(_.puid.getOrElse(""))
       val disallowedReason = allPuidInformation.disallowedPuids
         .filter(_.active)
-        .find(_.puid == puidMatch).map(_.reason)
-      val judgmentDisAllowedPuid = !allPuidInformation.allowedPuids.map(_.puid).contains(puidMatch)
+        .find(r => puidMatches.contains(r.puid)).map(_.reason)
+      val judgmentDisAllowedPuid = !allPuidInformation.allowedPuids.map(_.puid).forall(a => puidMatches.contains(a))
       val reason = if (res.consignmentType == "judgment" && judgmentDisAllowedPuid) {
         NonJudgmentFormat
-      } else if (res.consignmentType == "standard" && Try(res.fileSize.toLong).getOrElse(0L) > 0) {
-        disallowedReason.getOrElse(Success)
       } else if (res.fileSize == "0" && disallowedReason.contains(ZeroByteFile)) {
         ZeroByteFile
       } else {
-        Success
+        disallowedReason.getOrElse(Success)
       }
       Status(res.fileId, FileType, FFIDStatus, reason)
     }
@@ -143,7 +140,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
           s.statusValue != Success
         }
       }).map(_.id).toSet
-      val successfulIds = allStatuses.filter(_.statusValue == Success).map(_.id).toSet
+      val successfulIds = allStatuses.map(_.id).toSet.diff(failedIds)
       (failedIds.map(id => Status(id, FileType, ClientChecks, CompletedWithIssues)) ++
         successfulIds.map(id => Status(id, FileType, ClientChecks, Completed))).toList
     }
