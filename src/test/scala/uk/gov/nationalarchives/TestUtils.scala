@@ -57,7 +57,9 @@ class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoS
           res1 <- sql"""CREATE TABLE public."AllowedPuids" ("PUID" text not null)""".update.run.transact(xa)
           res2 <- sql"""INSERT INTO "AllowedPuids" ("PUID") VALUES ('fmt/000') """.update.run.transact(xa)
           res3 <- sql"""CREATE TABLE public."DisallowedPuids" ("PUID" text not null, "Reason" text not null, "Active" boolean not null default true)""".update.run.transact(xa)
-          res4 <- sql"""INSERT INTO "DisallowedPuids" ("PUID", "Reason", "Active") VALUES ('fmt/001', 'Invalid', true), ('fmt/002', 'Inactive', false) """.update.run.transact(xa)
+          res4 <-
+            sql"""INSERT INTO "DisallowedPuids" ("PUID", "Reason", "Active") VALUES
+                 ('fmt/001', 'Invalid', true), ('fmt/002', 'Inactive', false), ('', 'ZeroByteFile', true) """.update.run.transact(xa)
         } yield List(res1, res2, res3, res4)).unsafeRunSync()
     }
     super.afterContainersStart(containers)

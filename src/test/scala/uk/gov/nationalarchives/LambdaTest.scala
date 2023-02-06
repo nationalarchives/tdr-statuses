@@ -45,20 +45,36 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     filterStatus("ClientFilePath").head should equal(Success)
   }
 
-  val ffidResults: TableFor4[String, String, String, String] = Table(
+  val ffidResults: TableFor4[String, List[String], String, String] = Table(
     ("consignmentType", "puid", "fileSize", "result"),
-    ("judgment", "fmt/111", "1", "NonJudgmentFormat"),
-    ("judgment", "fmt/000", "1", "Success"),
-    ("standard", "fmt/002", "1", "Success"),
-    ("standard", "fmt/001", "1", "Invalid"),
-    ("standard", "fmt/003", "0", "Success")
+    ("judgment", List("fmt/111"), "1", "NonJudgmentFormat"),
+    ("judgment", List("fmt/000"), "1", "Success"),
+    ("standard", List("fmt/002"), "1", "Success"),
+    ("standard", List("fmt/001"), "1", "Invalid"),
+    ("standard", List("fmt/003"), "0", "Success"),
+    ("standard", List("fmt/000", "fmt/001"), "0", "Invalid"),
+    ("standard", List("fmt/000", "fmt/002"), "0", "Success"),
+    ("standard", List("fmt/001", "fmt/001"), "0", "Invalid")
   )
 
-  forAll(ffidResults)((consignmentType, puid, fileSize, expectedStatus) => {
-    "run" should s"return a $expectedStatus if the $consignmentType puid is $puid and file size is $fileSize" in withContainers { case container: PostgreSQLContainer =>
-      val inputReplacements = Map("ConsignmentType" -> consignmentType, "FFID" -> puid, "FileSize" -> fileSize)
-      val status = getStatus(inputReplacements, container, "FFID", "File")
-      status should equal(expectedStatus)
+  forAll(ffidResults)((consignmentType, puids, fileSize, expectedStatus) => {
+    "run" should s"return a $expectedStatus if the $consignmentType puid is ${puids.mkString(",")} and file size is $fileSize" in withContainers { case container: PostgreSQLContainer =>
+      System.setProperty("db-port", container.mappedPort(5432).toString)
+      val consignmentId = UUID.randomUUID()
+      val matches = puids.map(puid => {
+        FFIDMetadataInputMatches(Option("extension"), "identificationBasis", Option(puid))
+      })
+      val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+      val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), consignmentType, fileSize, "checksum", "originalPath", fileChecks) :: Nil
+      val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+      val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+      val input = new ByteArrayInputStream(s3Input.getBytes())
+      val output = new ByteArrayOutputStream()
+      new Lambda().run(input, output)
+
+      val result = getInputFromS3().statuses
+      val ffidStatus = result.statuses.find(_.statusName == "FFID").get
+      ffidStatus.statusValue should equal(expectedStatus)
     }
   })
 
@@ -196,6 +212,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     ("checksum", "", "fmt/000", "1", "CompletedWithIssues"),
     ("", "", "fmt/001", "1", "CompletedWithIssues"),
     ("checksum", "path", "fmt/001", "1", "Completed"),
+    ("checksum", "path", "", "0", "CompletedWithIssues"),
     ("checksum", "path", "fmt/000", "1", "Completed")
   )
 
