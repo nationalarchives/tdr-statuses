@@ -260,4 +260,67 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       clientChecksStatuses.head.statusValue should equal(expectedResult)
     }
   })
+
+  val missingInfo: TableFor3[Int, Int, Option[String]] = Table(
+    ("missingInfoCount", "providedInfoCount", "expectedConsignmentStatus"),
+    (1, 0, Option("Failed")),
+    (1, 1, Option("Failed")),
+    (0, 1, Option("Completed")),
+    (0, 0, None),
+  )
+
+  forAll(missingInfo)((missingInfoCount, providedInfoCount, expectedConsignmentStatus) => {
+    val antivirus = Antivirus(UUID.randomUUID(), "software", "softwareVersion", "databaseVersion", "", 1) :: Nil
+    val ffid = FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", Nil) :: Nil
+    val checksum = ChecksumResult("checksum", UUID.randomUUID()) :: Nil
+    val createFile = File(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", _)
+    val providedInfoFiles = List.fill(providedInfoCount)("")
+      .map(_ => createFile(FileCheckResults(antivirus, checksum, ffid)))
+
+    "antivirus statuses" should s"return $expectedConsignmentStatus if $missingInfoCount files have missing information and $providedInfoCount files have provided information" in {
+      val missingInfoFiles = List.fill(missingInfoCount)("")
+        .map(_ => createFile(FileCheckResults(Nil, checksum, ffid)))
+      val files = missingInfoFiles ++ providedInfoFiles
+
+      val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+      val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+      val input = new ByteArrayInputStream(s3Input.getBytes())
+      val output = new ByteArrayOutputStream()
+      new Lambda().run(input, output)
+
+      val result = getInputFromS3().statuses
+      result.statuses.count(s => s.statusName == "Antivirus" && s.statusValue == "Failed") should equal(missingInfoCount)
+      result.statuses.find(_.statusName == "ServerAntivirus").map(_.statusValue) should equal(expectedConsignmentStatus)
+    }
+
+    "checksum statuses" should s"return $expectedConsignmentStatus if $missingInfoCount files have missing information and $providedInfoCount files have provided information" in {
+      val missingInfoFiles = List.fill(missingInfoCount)("")
+        .map(_ => createFile(FileCheckResults(antivirus, Nil, ffid)))
+      val files = missingInfoFiles ++ providedInfoFiles
+      val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+      val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+      val input = new ByteArrayInputStream(s3Input.getBytes())
+      val output = new ByteArrayOutputStream()
+      new Lambda().run(input, output)
+
+      val result = getInputFromS3().statuses
+      result.statuses.count(s => s.statusName == "ServerChecksum" && s.statusType == "File" && s.statusValue == "Failed") should equal(missingInfoCount)
+      result.statuses.find(s => s.statusName == "ServerChecksum" && s.statusType == "Consignment").map(_.statusValue) should equal(expectedConsignmentStatus)
+    }
+
+    "file format statuses" should s"return $expectedConsignmentStatus if $missingInfoCount files have missing information and $providedInfoCount files have provided information" in {
+      val missingInfoFiles = List.fill(missingInfoCount)("")
+        .map(_ => createFile(FileCheckResults(antivirus, checksum, Nil)))
+      val files = missingInfoFiles ++ providedInfoFiles
+      val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+      val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+      val input = new ByteArrayInputStream(s3Input.getBytes())
+      val output = new ByteArrayOutputStream()
+      new Lambda().run(input, output)
+
+      val result = getInputFromS3().statuses
+      result.statuses.count(s => s.statusName == "FFID" && s.statusValue == "Failed") should equal(missingInfoCount)
+      result.statuses.find(_.statusName == "ServerFFID").map(_.statusValue) should equal(expectedConsignmentStatus)
+    }
+  })
 }
