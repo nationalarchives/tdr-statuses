@@ -87,7 +87,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
         Completed
       }
       input.results.headOption
-        .map(result => Status(result.consignmentId, ConsignmentType, ServerChecksum, consignmentStatus)).toList ++ fileStatuses
+        .map(result => Status(result.consignmentId, ConsignmentType, ServerChecksum, consignmentStatus, overwrite  = true)).toList ++ fileStatuses
     }
   }
 
