@@ -5,8 +5,6 @@ import cats.implicits._
 import uk.gov.nationalarchives.BackendCheckUtils.{File, Input, Status}
 import uk.gov.nationalarchives.PuidRepository.AllPuidInformation
 
-import scala.util.Try
-
 class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInformation) {
   private val Success = "Success"
   private val VirusDetected = "VirusDetected"
@@ -29,38 +27,39 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
   private val ClientChecks = "ClientChecks"
 
   def antivirus(): F[List[Status]] = {
-    for {
-      res <- input.results
-      av <- res.fileCheckResults.antivirus
-    } yield {
-      val value = av.result match {
-        case "" => Success
-        case _ => VirusDetected
+    input.results.map(result => {
+      val fileCheckResults = result.fileCheckResults
+      val status = if(fileCheckResults.antivirus.headOption.isEmpty) {
+        Failed
+      } else {
+        fileCheckResults.antivirus.head.result match {
+          case "" => Success
+          case _ => VirusDetected
+        }
       }
-      Status(res.fileId, FileType, Antivirus, value)
-    }
+      Status(result.fileId, FileType, Antivirus, status)
+    })
   }.pure[F]
 
   def ffid(): F[List[Status]] = {
-    for {
-      res <- input.results
-      ffid <- res.fileCheckResults.fileFormat
-    } yield {
-      val puidMatches = ffid.matches.map(_.puid.getOrElse(""))
+    input.results.map(result => {
+      val fileFormat = result.fileCheckResults.fileFormat
+      val puidMatches = fileFormat.flatMap(_.matches.map(_.puid.getOrElse("")))
       val disallowedReason = allPuidInformation.disallowedPuids
         .filter(_.active)
         .find(r => puidMatches.contains(r.puid)).map(_.reason)
       val judgmentDisAllowedPuid = !allPuidInformation.allowedPuids.map(_.puid).forall(a => puidMatches.contains(a))
-      val reason = if (res.consignmentType == "judgment" && judgmentDisAllowedPuid) {
+      val reason = if (result.consignmentType == "judgment" && judgmentDisAllowedPuid) {
         NonJudgmentFormat
-      } else if (res.fileSize == "0" && disallowedReason.contains(ZeroByteFile)) {
+      } else if (result.fileSize == "0" && disallowedReason.contains(ZeroByteFile)) {
         ZeroByteFile
+      } else if (fileFormat.isEmpty) {
+        Failed
       } else {
         disallowedReason.getOrElse(Success)
       }
-      Status(res.fileId, FileType, FFIDStatus, reason)
-    }
-
+      Status(result.fileId, FileType, FFIDStatus, reason)
+    })
   }.pure[F]
 
   def checksumMatch(): F[List[Status]] = {
@@ -78,26 +77,29 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
 
   def serverChecksum(): F[List[Status]] = {
     for {
-      consignmentStatus <- clientChecksum().map(cc => {
-        val value = if (cc.exists(_.statusValue != Success)) {
-          CompletedWithIssues
-        } else {
-          Completed
-        }
-        Status(input.results.head.consignmentId, ConsignmentType, ServerChecksum, value, overwrite = true) :: Nil
-      })
-      fileStatuses <-  statusIfEmpty(res => res.fileCheckResults.checksum.map(_.sha256Checksum).headOption, ServerChecksum)
-    } yield consignmentStatus ++ fileStatuses
-
+      fileStatuses <- statusIfEmpty(res => res.fileCheckResults.checksum.map(_.sha256Checksum).headOption, ServerChecksum)
+    } yield {
+      val consignmentStatus = if (input.results.map(_.fileCheckResults).exists(_.checksum.isEmpty)) {
+        Failed
+      } else if (fileStatuses.exists(_.statusValue == Failed)) {
+        CompletedWithIssues
+      } else {
+        Completed
+      }
+      input.results.headOption
+        .map(result => Status(result.consignmentId, ConsignmentType, ServerChecksum, consignmentStatus, overwrite  = true)).toList ++ fileStatuses
+    }
   }
 
   def serverAntivirus(): F[List[Status]] = antivirus().map(av => {
-    val value = if (av.exists(_.statusValue != Success)) {
+    val value = if (av.exists(_.statusValue == Failed)) {
+      Failed
+    } else if(av.exists(_.statusValue == VirusDetected)) {
       CompletedWithIssues
     } else {
       Completed
     }
-    Status(input.results.head.consignmentId, ConsignmentType, ServerAntivirus, value, overwrite = true) :: Nil
+    input.results.headOption.map(result => Status(result.consignmentId, ConsignmentType, ServerAntivirus, value, overwrite = true)).toList
   })
 
   def clientChecksum(): F[List[Status]] = statusIfEmpty(res => res.clientChecksum.some, ClientChecksum)
@@ -115,8 +117,11 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
     } yield {
       val activeDisallowedReasons = allPuidInformation.disallowedPuids.filter(_.active).map(_.reason)
       val hasErrors = fileFFID.map(_.statusValue).exists(activeDisallowedReasons.contains)
+      val isFailed = fileFFID.exists(_.statusValue == Failed)
       input.results.headOption.map(i => {
-        val statusValue = if (hasErrors) {
+        val statusValue = if(isFailed) {
+          Failed
+        } else if (hasErrors) {
           CompletedWithIssues
         } else {
           Completed
@@ -158,7 +163,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
   private def statusIfEmpty(fn: File => Option[String], statusName: String): F[List[Status]] = {
     input.results.map(res => {
       val value = fn(res)
-      val statusValue = if (value.contains("")) {
+      val statusValue = if (value.getOrElse("").equals("")) {
         Failed
       } else {
         Success
