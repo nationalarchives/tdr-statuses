@@ -64,9 +64,12 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
 
   def checksumMatch(): F[List[Status]] = {
     input.results.map(result => {
-      val serverChecksum = result.fileCheckResults.checksum.map(_.sha256Checksum).headOption
+      val checksumResult = result.fileCheckResults.checksum
+      val serverChecksum = checksumResult.map(_.sha256Checksum).headOption
       val clientChecksum = result.clientChecksum
-      val statusValue = if (serverChecksum.contains(clientChecksum)) {
+      val statusValue = if(checksumResult.isEmpty) {
+        Failed
+      } else if (serverChecksum.contains(clientChecksum)) {
         Success
       } else {
         Mismatch
