@@ -49,12 +49,12 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
         .filter(_.active)
         .find(r => puidMatches.contains(r.puid)).map(_.reason)
       val judgmentDisAllowedPuid = !allPuidInformation.allowedPuids.map(_.puid).forall(a => puidMatches.contains(a))
-      val reason = if (result.consignmentType == "judgment" && judgmentDisAllowedPuid) {
+      val reason = if (fileFormat.isEmpty) {
+        Failed
+      } else if (result.consignmentType == "judgment" && judgmentDisAllowedPuid) {
         NonJudgmentFormat
       } else if (result.fileSize == "0" && disallowedReason.contains(ZeroByteFile)) {
         ZeroByteFile
-      } else if (fileFormat.isEmpty) {
-        Failed
       } else {
         disallowedReason.getOrElse(Success)
       }
@@ -64,9 +64,12 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
 
   def checksumMatch(): F[List[Status]] = {
     input.results.map(result => {
-      val serverChecksum = result.fileCheckResults.checksum.map(_.sha256Checksum).headOption
+      val checksumResult = result.fileCheckResults.checksum
+      val serverChecksum = checksumResult.map(_.sha256Checksum).headOption
       val clientChecksum = result.clientChecksum
-      val statusValue = if (serverChecksum.contains(clientChecksum)) {
+      val statusValue = if(checksumResult.isEmpty) {
+        Failed
+      } else if (serverChecksum.contains(clientChecksum)) {
         Success
       } else {
         Mismatch

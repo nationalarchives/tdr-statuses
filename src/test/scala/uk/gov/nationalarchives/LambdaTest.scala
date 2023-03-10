@@ -323,4 +323,21 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       result.statuses.find(_.statusName == "ServerFFID").map(_.statusValue) should equal(expectedConsignmentStatus)
     }
   })
+
+  "backend checks statuses" should "return Failed if the input  is empty" in {
+    val fileCheckResults = FileCheckResults(Nil, Nil, Nil)
+    val files = File(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "path", fileCheckResults) :: Nil
+
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(Printer.noSpaces)
+
+    val input = new ByteArrayInputStream(s3Input.getBytes())
+    val output = new ByteArrayOutputStream()
+    new Lambda().run(input, output)
+
+    val result = getInputFromS3().statuses
+    result.statuses.find(_.statusName == "FFID").get.statusValue should equal("Failed")
+    result.statuses.find(_.statusName == "Antivirus").get.statusValue should equal("Failed")
+    result.statuses.find(_.statusName == "ChecksumMatch").get.statusValue should equal("Failed")
+  }
 }
