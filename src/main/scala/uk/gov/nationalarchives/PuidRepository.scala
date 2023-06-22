@@ -4,6 +4,7 @@ import cats.effect.kernel.Async
 import cats.implicits._
 import doobie.Transactor
 import doobie.implicits._
+import doobie.util.log.LogHandler
 import doobie.util.transactor.Transactor.Aux
 import uk.gov.nationalarchives.DatabaseConfig.DatabaseCredentials
 import uk.gov.nationalarchives.PuidRepository.{AllPuidInformation, AllowedPuids, DisallowedPuids}
@@ -42,7 +43,7 @@ object PuidRepository {
     }
     val jdbcUrl = s"jdbc:postgresql://${credentials.host}:${credentials.port}/consignmentapi$suffix"
     val xa: Aux[F, Unit] = Transactor.fromDriverManager[F](
-      "org.postgresql.Driver", jdbcUrl, credentials.username, credentials.password
+      "org.postgresql.Driver", jdbcUrl, credentials.username, credentials.password, None
     )
     new PuidRepository[F](xa)
   }
