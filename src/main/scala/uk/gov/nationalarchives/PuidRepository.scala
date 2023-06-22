@@ -42,7 +42,7 @@ object PuidRepository {
     }
     val jdbcUrl = s"jdbc:postgresql://${credentials.host}:${credentials.port}/consignmentapi$suffix"
     val xa: Aux[F, Unit] = Transactor.fromDriverManager[F](
-      "org.postgresql.Driver", jdbcUrl, credentials.username, credentials.password
+      "org.postgresql.Driver", jdbcUrl, credentials.username, credentials.password, None
     )
     new PuidRepository[F](xa)
   }

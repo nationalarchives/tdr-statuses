@@ -51,7 +51,7 @@ class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoS
       case container: PostgreSQLContainer =>
         val jdbcUrl = s"jdbc:postgresql://localhost:${container.mappedPort(5432)}/consignmentapi"
         val xa: Aux[IO, Unit] = Transactor.fromDriverManager[IO](
-          "org.postgresql.Driver", jdbcUrl, "tdr", "password"
+          "org.postgresql.Driver", jdbcUrl, "tdr", "password", None
         )
         (for {
           res1 <- sql"""CREATE TABLE public."AllowedPuids" ("PUID" text not null)""".update.run.transact(xa)
