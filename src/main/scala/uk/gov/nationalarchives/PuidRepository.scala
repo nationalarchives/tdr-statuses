@@ -4,7 +4,6 @@ import cats.effect.kernel.Async
 import cats.implicits._
 import doobie.Transactor
 import doobie.implicits._
-import doobie.util.log.LogHandler
 import doobie.util.transactor.Transactor.Aux
 import uk.gov.nationalarchives.DatabaseConfig.DatabaseCredentials
 import uk.gov.nationalarchives.PuidRepository.{AllPuidInformation, AllowedPuids, DisallowedPuids}
