@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  private val circeVersion = "0.14.5"
+  private val circeVersion = "0.14.6"
   private val testContainersVersion = "0.41.0"
   private val awsVersion = "2.20.1"
   private val doobieVersion = "1.0.0-RC4"
@@ -21,6 +21,6 @@ object Dependencies {
   lazy val catsTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0"
   lazy val testContainersScala = "com.dimafeng" %% "testcontainers-scala-scalatest" % testContainersVersion
   lazy val testContainersPostgres = "com.dimafeng" %% "testcontainers-scala-postgresql" % testContainersVersion
-  lazy val mockito = "org.mockito" %% "mockito-scala" % "1.17.14"
+  lazy val mockito = "org.mockito" %% "mockito-scala" % "1.17.22"
   lazy val wiremock = "com.github.tomakehurst" % "wiremock" % "3.0.0"
 }
