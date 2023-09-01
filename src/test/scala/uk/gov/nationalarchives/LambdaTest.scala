@@ -62,7 +62,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       System.setProperty("db-port", container.mappedPort(5432).toString)
       val consignmentId = UUID.randomUUID()
       val matches = puids.map(puid => {
-        FFIDMetadataInputMatches(Option("extension"), "identificationBasis", Option(puid))
+        FFIDMetadataInputMatches(Option("extension"), "identificationBasis", Option(puid), Some(false), Some("format-name"))
       })
       val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
       val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), consignmentType, fileSize, "checksum", "originalPath", fileChecks) :: Nil
@@ -157,7 +157,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       System.setProperty("db-port", container.mappedPort(5432).toString)
       val consignmentId = UUID.randomUUID()
       val files = puids.map(puid => {
-        val matches = FFIDMetadataInputMatches(Option("extension"),"identificationBasis" ,Option(puid)) :: Nil
+        val matches = FFIDMetadataInputMatches(Option("extension"),"identificationBasis" ,Option(puid), Some(false), Some("format-name")) :: Nil
         val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
         File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", fileChecks)
       })
