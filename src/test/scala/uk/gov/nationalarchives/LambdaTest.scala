@@ -54,7 +54,8 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     ("standard", List("fmt/003"), "0", "Success"),
     ("standard", List("fmt/000", "fmt/001"), "0", "Invalid"),
     ("standard", List("fmt/000", "fmt/002"), "0", "Success"),
-    ("standard", List("fmt/001", "fmt/001"), "0", "Invalid")
+    ("standard", List("fmt/001", "fmt/001"), "0", "Invalid"),
+    ("standard", List("fmt/494", "fmt/002"), "0", "Success")
   )
 
   forAll(ffidResults)((consignmentType, puids, fileSize, expectedStatus) => {
@@ -212,7 +213,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     ("checksum", "", "fmt/000", "1", "CompletedWithIssues"),
     ("", "", "fmt/001", "1", "CompletedWithIssues"),
     ("checksum", "path", "fmt/001", "1", "Completed"),
-    ("checksum", "path", "", "0", "CompletedWithIssues"),
+    ("checksum", "path", "", "0", "Completed"),
     ("checksum", "path", "fmt/000", "1", "Completed")
   )
 
