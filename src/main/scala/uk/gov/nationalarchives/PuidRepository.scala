@@ -35,7 +35,7 @@ object PuidRepository {
 
   def apply[F[_] : Async](credentials: DatabaseCredentials): PuidRepository[F] = {
     val suffix = if(credentials.useIamAuth) {
-      val certificatePath = getClass.getResource("/rds-ca-2019-root.pem").getPath
+      val certificatePath = getClass.getResource("/rds-eu-west-2-bundle.pem").getPath
       s"?ssl=true&sslrootcert=$certificatePath&sslmode=verify-full"
     } else {
       ""
