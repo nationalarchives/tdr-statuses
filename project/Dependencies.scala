@@ -3,17 +3,17 @@ import sbt._
 object Dependencies {
   private val circeVersion = "0.14.6"
   private val testContainersVersion = "0.41.0"
-  private val awsVersion = "2.21.26"
-  private val doobieVersion = "1.0.0-RC4"
+  private val awsVersion = "2.21.28"
+  private val doobieVersion = "1.0.0-RC5"
 
   lazy val awsRds = "software.amazon.awssdk" % "rds" % awsVersion
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
-  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.41"
+  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.42"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
   lazy val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
-  lazy val postgres = "org.postgresql" % "postgresql" % "42.6.0"
+  lazy val postgres = "org.postgresql" % "postgresql" % "42.7.0"
   lazy val pureConfig = "com.github.pureconfig" %% "pureconfig" % "0.17.4"
   lazy val doobie = "org.tpolecat" %% "doobie-core" % doobieVersion
   lazy val doobiePostgres = "org.tpolecat" %% "doobie-postgres"  % doobieVersion
