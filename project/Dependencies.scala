@@ -14,7 +14,7 @@ object Dependencies {
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
   lazy val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
   lazy val postgres = "org.postgresql" % "postgresql" % "42.7.1"
-  lazy val pureConfig = "com.github.pureconfig" %% "pureconfig" % "0.17.4"
+  lazy val pureConfig = "com.github.pureconfig" %% "pureconfig" % "0.17.5"
   lazy val doobie = "org.tpolecat" %% "doobie-core" % doobieVersion
   lazy val doobiePostgres = "org.tpolecat" %% "doobie-postgres"  % doobieVersion
   lazy val scalaTest = "org.scalatest" %% "scalatest" % "3.2.17"
