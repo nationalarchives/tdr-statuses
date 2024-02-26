@@ -1,0 +1,18 @@
+queue_rules:
+  - name: default
+    conditions:
+      - "check-success=test / test"
+pull_request_rules:
+  - name: automatic merge for Scala Steward
+    conditions:
+      - author=tna-digital-archiving-jenkins
+      - "check-success=test / test"
+      - or:
+          - files=build.sbt
+          - files~=^(!?project/)
+    actions:
+      review:
+        type: APPROVE
+        message: Automatically approving Scala Steward
+      queue:
+        name: default
