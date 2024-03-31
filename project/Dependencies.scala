@@ -3,7 +3,7 @@ import sbt._
 object Dependencies {
   private val circeVersion = "0.14.6"
   private val testContainersVersion = "0.41.3"
-  private val awsVersion = "2.25.19"
+  private val awsVersion = "2.25.21"
   private val doobieVersion = "1.0.0-RC5"
 
   lazy val awsRds = "software.amazon.awssdk" % "rds" % awsVersion
