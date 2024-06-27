@@ -1,9 +1,10 @@
 import sbt._
 
 object Dependencies {
-  private val circeVersion = "0.14.7"
+  private val circeVersion = "0.14.8"
+
   private val testContainersVersion = "0.41.4"
-  private val awsVersion = "2.25.70"
+  private val awsVersion = "2.26.8"
   private val doobieVersion = "1.0.0-RC5"
 
   lazy val awsRds = "software.amazon.awssdk" % "rds" % awsVersion
@@ -17,10 +18,10 @@ object Dependencies {
   lazy val pureConfig = "com.github.pureconfig" %% "pureconfig" % "0.17.7"
   lazy val doobie = "org.tpolecat" %% "doobie-core" % doobieVersion
   lazy val doobiePostgres = "org.tpolecat" %% "doobie-postgres"  % doobieVersion
-  lazy val scalaTest = "org.scalatest" %% "scalatest" % "3.2.18"
+  lazy val scalaTest = "org.scalatest" %% "scalatest" % "3.2.19"
   lazy val catsTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0"
   lazy val testContainersScala = "com.dimafeng" %% "testcontainers-scala-scalatest" % testContainersVersion
   lazy val testContainersPostgres = "com.dimafeng" %% "testcontainers-scala-postgresql" % testContainersVersion
-  lazy val mockito = "org.mockito" %% "mockito-scala" % "1.17.31"
+  lazy val mockito = "org.mockito" %% "mockito-scala" % "1.17.37"
   lazy val wiremock = "com.github.tomakehurst" % "wiremock" % "3.0.1"
 }
