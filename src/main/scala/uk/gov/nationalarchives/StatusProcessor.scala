@@ -50,15 +50,14 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
         .filter(_.active)
         .find(r => puidMatches.contains(r.puid)).map(_.reason)
       val judgmentDisAllowedPuid = !allPuidInformation.allowedPuids.map(_.puid).forall(a => puidMatches.contains(a))
-      val reason = if (fileFormat.isEmpty) {
-        Failed
-      } else if (result.consignmentType == "judgment" && judgmentDisAllowedPuid) {
-        NonJudgmentFormat
-      } else if (result.fileSize == "0") {
-        zeroByteFFIDStatusHandling(disallowedReason)
-      } else {
-        disallowedReason.getOrElse(Success)
+
+      val reason = result match {
+        case r if r.consignmentType == "judgment" && judgmentDisAllowedPuid => NonJudgmentFormat
+        case r if r.fileSize == "0" => zeroByteFFIDStatusHandling(disallowedReason)
+        case _ if fileFormat.isEmpty => Failed
+        case _ => disallowedReason.getOrElse(Success)
       }
+
       Status(result.fileId, FileType, FFIDStatus, reason)
     })
   }.pure[F]
