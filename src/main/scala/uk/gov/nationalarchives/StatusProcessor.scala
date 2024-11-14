@@ -180,10 +180,9 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
     // 0 byte file cannot be password protected but in some instances PRONOM mis-identifies as password protected
     // PRONOM uses the file extension to identify file type with 0 byte file.
     // As a result for '.docx' extension PRONOM includes the encrypted type ('Microsoft Office Encrypted Document') as one of the identified types
-    if (disallowedReason.contains(PasswordProtected) || disallowedReason.isEmpty) {
-      Success
-    } else {
-      disallowedReason.get
+    disallowedReason match {
+      case Some(dr) if dr == PasswordProtected => ZeroByteFile
+      case _ => ZeroByteFile
     }
   }
 }

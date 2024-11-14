@@ -47,15 +47,15 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
   val ffidResults: TableFor4[String, List[String], String, String] = Table(
     ("consignmentType", "puid", "fileSize", "result"),
-    ("judgment", List("fmt/111"), "1", "NonJudgmentFormat"),
-    ("judgment", List("fmt/000"), "1", "Success"),
-    ("standard", List("fmt/002"), "1", "Success"),
-    ("standard", List("fmt/001"), "1", "Invalid"),
-    ("standard", List("fmt/003"), "0", "Success"),
-    ("standard", List("fmt/000", "fmt/001"), "0", "Invalid"),
-    ("standard", List("fmt/000", "fmt/002"), "0", "Success"),
-    ("standard", List("fmt/001", "fmt/001"), "0", "Invalid"),
-    ("standard", List("fmt/494", "fmt/002"), "0", "Success")
+    ("judgment", List(s"$disallowedJudgmentPuid"), "1", "NonJudgmentFormat"),
+    ("judgment", List(s"$allowedJudgmentPuid"), "1", "Success"),
+    ("standard", List(s"$inactiveDisallowedStandardPuid"), "1", "Success"),
+    ("standard", List(s"$activeDisallowedStandardPuid"), "1", "Invalid"),
+    ("standard", List(s"$allowedStandardPuid"), "0", "ZeroByteFile"),
+    ("standard", List(s"$allowedJudgmentPuid", s"$activeDisallowedStandardPuid"), "0", "ZeroByteFile"),
+    ("standard", List(s"$allowedJudgmentPuid", s"$inactiveDisallowedStandardPuid"), "0", "ZeroByteFile"),
+    ("standard", List(s"$activeDisallowedStandardPuid", s"$activeDisallowedStandardPuid"), "0", "ZeroByteFile"),
+    ("standard", List(s"$passwordProtectedPuid", s"$inactiveDisallowedStandardPuid"), "0", "ZeroByteFile")
   )
 
   forAll(ffidResults)((consignmentType, puids, fileSize, expectedStatus) => {
@@ -147,10 +147,10 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
   val serverFFIDResults: TableFor2[List[String], String] = Table(
     ("puids", "expectedResult"),
-    (List("fmt/000", "fmt/002"), "Completed"),
-    (List("fmt/000"), "Completed"),
-    (List("fmt/000", "fmt/001"), "CompletedWithIssues"),
-    (List("fmt/001"), "CompletedWithIssues")
+    (List(s"$allowedJudgmentPuid", s"$inactiveDisallowedStandardPuid"), "Completed"),
+    (List(s"$allowedJudgmentPuid"), "Completed"),
+    (List(s"$allowedJudgmentPuid", s"$activeDisallowedStandardPuid"), "CompletedWithIssues"),
+    (List(s"$activeDisallowedStandardPuid"), "CompletedWithIssues")
   )
 
   forAll(serverFFIDResults)((puids, expectedResult) => {
@@ -209,12 +209,12 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
   val fileClientChecksResults: TableFor5[String, String, String, String, String] = Table(
     ("clientChecksum", "clientFilePath", "ffid", "fileSize", "expectedStatus"),
-    ("", "path", "fmt/000", "1", "CompletedWithIssues"),
-    ("checksum", "", "fmt/000", "1", "CompletedWithIssues"),
-    ("", "", "fmt/001", "1", "CompletedWithIssues"),
-    ("checksum", "path", "fmt/001", "1", "Completed"),
-    ("checksum", "path", "", "0", "Completed"),
-    ("checksum", "path", "fmt/000", "1", "Completed")
+    ("", "path", s"$allowedJudgmentPuid", "1", "CompletedWithIssues"),
+    ("checksum", "", s"$allowedJudgmentPuid", "1", "CompletedWithIssues"),
+    ("", "", s"$activeDisallowedStandardPuid", "1", "CompletedWithIssues"),
+    ("checksum", "path", s"$activeDisallowedStandardPuid", "1", "Completed"),
+    ("checksum", "path", "", "0", "CompletedWithIssues"),
+    ("checksum", "path", s"$allowedJudgmentPuid", "1", "Completed")
   )
 
   forAll(fileClientChecksResults)((clientChecksum, clientFilePath, ffid, fileSize, expectedStatus) => {
