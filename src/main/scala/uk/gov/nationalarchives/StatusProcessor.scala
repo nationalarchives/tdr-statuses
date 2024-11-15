@@ -25,7 +25,6 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
   private val CompletedWithIssues = "CompletedWithIssues"
   private val Completed = "Completed"
   private val ClientChecks = "ClientChecks"
-  private val PasswordProtected = "PasswordProtected"
 
   def antivirus(): F[List[Status]] = {
     input.results.map(result => {
@@ -53,7 +52,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
 
       val reason = result match {
         case r if r.consignmentType == "judgment" && judgmentDisAllowedPuid => NonJudgmentFormat
-        case r if r.fileSize == "0" => zeroByteFFIDStatusHandling(disallowedReason)
+        case r if r.fileSize == "0" => ZeroByteFile
         case _ if fileFormat.isEmpty => Failed
         case _ => disallowedReason.getOrElse(Success)
       }
@@ -173,16 +172,6 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
       }
       Status(res.fileId, FileType, statusName, statusValue)
     }).pure[F]
-  }
-
-  private def zeroByteFFIDStatusHandling(disallowedReason: Option[String]): String = {
-    // 0 byte file cannot be password protected but in some instances PRONOM mis-identifies as password protected
-    // PRONOM uses the file extension to identify file type with 0 byte file.
-    // As a result for '.docx' extension PRONOM includes the encrypted type ('Microsoft Office Encrypted Document') as one of the identified types
-    disallowedReason match {
-      case Some(dr) if dr == PasswordProtected => ZeroByteFile
-      case _ => ZeroByteFile
-    }
   }
 }
 
