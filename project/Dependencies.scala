@@ -10,7 +10,7 @@ object Dependencies {
   lazy val awsRds = "software.amazon.awssdk" % "rds" % awsVersion
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
-  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.89"
+  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.90"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
   lazy val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
@@ -19,7 +19,7 @@ object Dependencies {
   lazy val doobie = "org.tpolecat" %% "doobie-core" % doobieVersion
   lazy val doobiePostgres = "org.tpolecat" %% "doobie-postgres"  % doobieVersion
   lazy val scalaTest = "org.scalatest" %% "scalatest" % "3.2.19"
-  lazy val catsTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0"
+  lazy val catsTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.6.0"
   lazy val testContainersScala = "com.dimafeng" %% "testcontainers-scala-scalatest" % testContainersVersion
   lazy val testContainersPostgres = "com.dimafeng" %% "testcontainers-scala-postgresql" % testContainersVersion
   lazy val mockito = "org.mockito" %% "mockito-scala" % "1.17.37"
