@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  private val circeVersion = "0.14.10"
+  private val circeVersion = "0.14.12"
 
   private val testContainersVersion = "0.43.0"
   private val awsVersion = "2.26.27"
