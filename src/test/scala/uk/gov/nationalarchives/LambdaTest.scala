@@ -66,7 +66,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
         FFIDMetadataInputMatches(Option("extension"), "identificationBasis", Option(puid), Some(false), Some("format-name"))
       })
       val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
-      val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), consignmentType, fileSize, "checksum", "originalPath", fileChecks) :: Nil
+      val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), consignmentType, fileSize, "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks) :: Nil
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
@@ -160,7 +160,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val files = puids.map(puid => {
         val matches = FFIDMetadataInputMatches(Option("extension"),"identificationBasis" ,Option(puid), Some(false), Some("format-name")) :: Nil
         val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
-        File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", fileChecks)
+        File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks)
       })
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
@@ -191,7 +191,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val files = avResults.map(avResult => {
         val antivirus: Antivirus = Antivirus(UUID.randomUUID(), "software", "softwareVersion", "databaseVersion", avResult, 1)
         val fileChecks = FileCheckResults(List(antivirus), Nil, Nil)
-        File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", fileChecks)
+        File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks)
       })
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
@@ -245,8 +245,8 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       System.setProperty("db-port", container.mappedPort(5432).toString)
       val consignmentId = UUID.randomUUID()
       val files: List[File] = fileClientChecks map {
-        case "Completed" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", FileCheckResults(Nil, Nil, Nil))
-        case "CompletedWithIssues" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "0", "", "originalPath", FileCheckResults(Nil, Nil, Nil))
+        case "Completed" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), FileCheckResults(Nil, Nil, Nil))
+        case "CompletedWithIssues" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "0", "", "originalPath", Some("source-bucket"), Some("object/key"), FileCheckResults(Nil, Nil, Nil))
       }
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
@@ -274,7 +274,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     val antivirus = Antivirus(UUID.randomUUID(), "software", "softwareVersion", "databaseVersion", "", 1) :: Nil
     val ffid = FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", Nil) :: Nil
     val checksum = ChecksumResult("checksum", UUID.randomUUID()) :: Nil
-    val createFile = File(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", _)
+    val createFile = File(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), _)
     val providedInfoFiles = List.fill(providedInfoCount)("")
       .map(_ => createFile(FileCheckResults(antivirus, checksum, ffid)))
 
@@ -327,7 +327,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
   "backend checks statuses" should "return Failed if the input  is empty" in {
     val fileCheckResults = FileCheckResults(Nil, Nil, Nil)
-    val files = File(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "path", fileCheckResults) :: Nil
+    val files = File(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "path", Some("source-bucket"), Some("object/key"), fileCheckResults) :: Nil
 
     val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
     val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(Printer.noSpaces)
