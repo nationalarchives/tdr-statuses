@@ -1,12 +1,12 @@
 queue_rules:
   - name: default
     conditions:
-      - "check-success=test / test"
+      - check-success=test / test
 pull_request_rules:
   - name: automatic merge for Scala Steward
     conditions:
       - author=tna-da-bot
-      - "check-success=test / test"
+      - check-success=test / test
       - or:
           - files=build.sbt
           - files~=^(!?project/)
@@ -16,3 +16,5 @@ pull_request_rules:
         message: Automatically approving Scala Steward
       queue:
         name: default
+merge_queue:
+  max_parallel_checks: 1
