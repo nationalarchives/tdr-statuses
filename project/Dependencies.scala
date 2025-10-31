@@ -4,7 +4,7 @@ object Dependencies {
   private val circeVersion = "0.14.15"
 
   private val testContainersVersion = "0.43.6"
-  private val awsVersion = "2.34.9"
+  private val awsVersion = "2.37.2"
   private val doobieVersion = "1.0.0-RC10"
 
   lazy val awsRds = "software.amazon.awssdk" % "rds" % awsVersion
