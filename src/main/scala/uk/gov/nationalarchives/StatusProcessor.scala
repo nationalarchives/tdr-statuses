@@ -48,7 +48,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
       val disallowedReason = allPuidInformation.disallowedPuids
         .filter(_.active)
         .find(r => puidMatches.contains(r.puid)).map(_.reason)
-      val judgmentDisAllowedPuid = !allPuidInformation.allowedPuids.map(_.puid).forall(a => puidMatches.contains(a))
+      val judgmentDisAllowedPuid = !puidMatches.forall(p => allPuidInformation.allowedPuids.map(_.puid).contains(p))
 
       val reason = result match {
         case r if r.consignmentType == "judgment" && judgmentDisAllowedPuid => NonJudgmentFormat
