@@ -21,7 +21,7 @@ permissions:
   contents: write
 jobs:
   deploy:
-    uses: nationalarchives/tdr-github-actions/.github/workflows/lambda_deploy.yml@main
+    uses: nationalarchives/tdr-github-actions/.github/workflows/lambda_deploy.yml@b41bc75cc920bddbb2ac12dc3a253efb3ef5e6fe # v0.0.3
     with:
       lambda-name: statuses
       deployment-package: statuses.jar
