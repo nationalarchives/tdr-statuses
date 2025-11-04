@@ -9,7 +9,7 @@ permissions:
   contents: write
 jobs:
   test:
-    uses: nationalarchives/tdr-github-actions/.github/workflows/tdr_test.yml@305d1b677f31b77f35cd4679ebd469857de9e967 # v0.0.1
+    uses: nationalarchives/tdr-github-actions/.github/workflows/tdr_test.yml@1c56dd1e838340ab53c7dc55dbbb974a062a6ae9 # v0.0.6
     with:
       repo-name: tdr-statuses
       test-command: |
