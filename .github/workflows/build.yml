@@ -5,7 +5,7 @@ on:
       - main
 jobs:
   pre-deploy:
-    uses: nationalarchives/tdr-github-actions/.github/workflows/lambda_build.yml@b41bc75cc920bddbb2ac12dc3a253efb3ef5e6fe # v0.0.3
+    uses: nationalarchives/tdr-github-actions/.github/workflows/lambda_build.yml@1c56dd1e838340ab53c7dc55dbbb974a062a6ae9 # v0.0.6
     with:
       lambda-name: statuses
       repo-name: tdr-statuses
