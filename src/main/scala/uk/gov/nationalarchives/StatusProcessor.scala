@@ -25,6 +25,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
   private val CompletedWithIssues = "CompletedWithIssues"
   private val Completed = "Completed"
   private val ClientChecks = "ClientChecks"
+  private val ServerRedaction = "ServerRedaction"
 
   def antivirus(): F[List[Status]] = {
     input.results.map(result => {
@@ -132,6 +133,16 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
       }).toList
     }
   }
+
+  def serverRedaction(): F[List[Status]] = {
+    for {
+      redactedResults <- redactedStatus()
+    } yield {
+      val statusValue = if (redactedResults.exists(_.statusValue != Success)) { CompletedWithIssues } else Completed
+      println(s"HERE: $statusValue")
+      input.results.headOption.map(result => Status(result.consignmentId, ConsignmentType, ServerRedaction, statusValue, overwrite = true)).toList
+      }
+    }
 
   def fileClientChecks(): F[List[Status]] = {
     for {
