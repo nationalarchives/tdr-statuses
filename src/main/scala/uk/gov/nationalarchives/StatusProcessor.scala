@@ -139,7 +139,6 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
       redactedResults <- redactedStatus()
     } yield {
       val statusValue = if (redactedResults.exists(_.statusValue != Success)) { CompletedWithIssues } else Completed
-      println(s"HERE: $statusValue")
       input.results.headOption.map(result => Status(result.consignmentId, ConsignmentType, ServerRedaction, statusValue, overwrite = true)).toList
       }
     }
@@ -149,8 +148,9 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
       ffid <- ffid()
       clientChecksum <- clientChecksum()
       clientFilePath <- clientFilePath()
+      redactions <- redactedStatus()
     } yield {
-      val allStatuses = ffid ++ clientChecksum ++ clientFilePath
+      val allStatuses = ffid ++ clientChecksum ++ clientFilePath ++ redactions
       val failedIds = allStatuses.filter(s => {
         if(s.statusName == FFIDStatus) {
           s.statusValue == ZeroByteFile
