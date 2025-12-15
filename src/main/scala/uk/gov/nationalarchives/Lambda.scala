@@ -32,11 +32,12 @@ class Lambda {
     redactedStatus <- processor.redactedStatus()
     serverFFID <- processor.serverFFID()
     serverAV <- processor.serverAntivirus()
+    serverRedaction <- processor.serverRedaction()
     fileClientChecks <- processor.fileClientChecks()
     consignmentClientChecks <- processor.consignmentClientChecks()
   } yield ffid ::: av ::: checksumMatch ::: serverChecksum ::: clientChecksum :::
     clientFilePath ::: redactedStatus ::: serverFFID ::: fileClientChecks :::
-    consignmentClientChecks ::: serverAV
+    consignmentClientChecks ::: serverAV ::: serverRedaction
 
   def run(inputStream: InputStream, outputStream: OutputStream): Unit = {
     val inputString = Source.fromInputStream(inputStream).mkString

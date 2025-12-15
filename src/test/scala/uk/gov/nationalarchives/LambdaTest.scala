@@ -32,7 +32,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     val replacementsMap = Map("Antivirus" -> "", "ClientChecksum" -> "abc", "ServerChecksum" -> "abc", "FileSize" -> "1")
     val statuses: List[Status] = getStatuses(replacementsMap, container)
 
-    statuses.size should equal(11)
+    statuses.size should equal(12)
 
     def filterStatus(name: String): List[String] = statuses.filter(_.statusName == name).map(_.statusValue)
 
@@ -43,6 +43,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     filterStatus("ServerChecksum").last should equal(Success)
     filterStatus("ClientChecksum").head should equal(Success)
     filterStatus("ClientFilePath").head should equal(Success)
+    filterStatus("ServerRedaction").head should equal(Completed)
   }
 
   val ffidResults: TableFor4[String, List[String], String, String] = Table(
@@ -204,6 +205,36 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       serverAVStatuses.size should equal(1)
       serverAVStatuses.head.id should equal(consignmentId)
       serverAVStatuses.head.statusValue should equal(expectedResult)
+    }
+  })
+
+  val redactedFilePairs = RedactedFilePairs(UUID.randomUUID(), "originalFilePath", UUID.randomUUID(), "redactedFilePath")
+
+  val redactionResults: TableFor3[String, RedactedResults, String] = Table(
+    ("description", "redactedResults", "expectedResult"),
+    ("no redactions", RedactedResults(Nil, Nil), "Completed"),
+    ("redactions with no errors", RedactedResults(List(redactedFilePairs), Nil), "Completed"),
+    ("redactions with errors", RedactedResults(List(redactedFilePairs), List(RedactedErrors(UUID.randomUUID(), "error cause"))), "CompletedWithIssues"),
+  )
+
+  forAll(redactionResults)((description, redactedResults, expectedResult) => {
+    "run" should s"return the expected consignment status $expectedResult for $description" in withContainers { case container: PostgreSQLContainer =>
+      System.setProperty("db-port", container.mappedPort(5432).toString)
+      val consignmentId = UUID.randomUUID()
+      val files = List(File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum",
+        "originalPath", Some("source-bucket"), Some("object/key"), FileCheckResults(Nil, Nil, Nil)))
+
+      val inputString = Input(files, redactedResults, StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+      val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+      val input = new ByteArrayInputStream(s3Input.getBytes())
+      val output = new ByteArrayOutputStream()
+      new Lambda().run(input, output)
+
+      val result = getInputFromS3().statuses
+      val serverRedaction = result.statuses.filter(_.statusName == "ServerRedaction")
+      serverRedaction.size should equal(1)
+      serverRedaction.head.id should equal(consignmentId)
+      serverRedaction.head.statusValue should equal(expectedResult)
     }
   })
 
