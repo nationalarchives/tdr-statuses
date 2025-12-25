@@ -3,14 +3,14 @@ import sbt._
 object Dependencies {
   private val circeVersion = "0.14.15"
 
-  private val testContainersVersion = "0.44.0"
-  private val awsVersion = "2.40.13"
+  private val testContainersVersion = "0.44.1"
+  private val awsVersion = "2.40.15"
   private val doobieVersion = "1.0.0-RC11"
 
   lazy val awsRds = "software.amazon.awssdk" % "rds" % awsVersion
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
-  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.157"
+  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.158"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
   lazy val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
