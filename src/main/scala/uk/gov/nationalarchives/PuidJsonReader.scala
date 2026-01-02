@@ -24,13 +24,12 @@ class PuidJsonReader(allowedPuidsResult: Either[io.circe.Error, List[AllowedPuid
     allowedPuids <- allowedPuids()
     disallowedPuids <- disallowedPuids()
   } yield AllPuidInformation(allowedPuids, disallowedPuids)
-
 }
 
 object PuidJsonReader {
 
-  private val ALLOWED_PUIDs: String = "puids/allowed-puids.json"
-  private val DISALLOWED_PUIDs: String = "puids/disallowed-puids.json"
+  private val allowedPuidsConfiguration: String = "puids/allowed-puids.json"
+  private val disallowedPuidConfiguration: String = "puids/disallowed-puids.json"
 
   case class AllPuidInformation(allowedPuids: List[AllowedPuids], disallowedPuids: List[DisallowedPuids])
 
@@ -38,8 +37,8 @@ object PuidJsonReader {
   case class AllowedPuids(puid: String, puidDescription: String, consignmentType: String)
 
   def apply(): PuidJsonReader = {
-    val allowedPuidsResult = decode[List[AllowedPuids]](readJson(ALLOWED_PUIDs))
-    val disallowedPuidsResult = decode[List[DisallowedPuids]](readJson(DISALLOWED_PUIDs))
+    val allowedPuidsResult = decode[List[AllowedPuids]](readJson(allowedPuidsConfiguration))
+    val disallowedPuidsResult = decode[List[DisallowedPuids]](readJson(disallowedPuidConfiguration))
     new PuidJsonReader(allowedPuidsResult, disallowedPuidsResult)
   }
 
