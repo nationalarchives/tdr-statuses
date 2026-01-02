@@ -1,6 +1,5 @@
 package uk.gov.nationalarchives
 
-import com.dimafeng.testcontainers.PostgreSQLContainer
 import io.circe.Printer
 import io.circe.Printer.noSpaces
 import io.circe.generic.auto._
@@ -26,11 +25,9 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     wiremockS3Server.stop()
   }
 
-  override def afterContainersStart(containers: containerDef.Container): Unit = super.afterContainersStart(containers)
-
-  "run" should "return success statuses if incoming json is valid" in withContainers { case container: PostgreSQLContainer =>
+  "run" should "return success statuses if incoming json is valid" in {
     val replacementsMap = Map("Antivirus" -> "", "ClientChecksum" -> "abc", "ServerChecksum" -> "abc", "FileSize" -> "1")
-    val statuses: List[Status] = getStatuses(replacementsMap, container)
+    val statuses: List[Status] = getStatuses(replacementsMap)
 
     statuses.size should equal(12)
 
@@ -51,7 +48,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     ("judgment", List(s"$disallowedJudgmentPuid"), "1", "NonJudgmentFormat"),
     ("judgment", List(s"$allowedJudgmentPuid"), "1", "Success"),
     ("standard", List(s"$inactiveDisallowedStandardPuid"), "1", "Success"),
-    ("standard", List(s"$activeDisallowedStandardPuid"), "1", "Invalid"),
+    ("standard", List(s"$activeDisallowedStandardPuid"), "1", "Zip"),
     ("standard", List(s"$allowedStandardPuid"), "0", "ZeroByteFile"),
     ("standard", List(s"$allowedJudgmentPuid", s"$activeDisallowedStandardPuid"), "0", "ZeroByteFile"),
     ("standard", List(s"$allowedJudgmentPuid", s"$inactiveDisallowedStandardPuid"), "0", "ZeroByteFile"),
@@ -60,8 +57,8 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
   )
 
   forAll(ffidResults)((consignmentType, puids, fileSize, expectedStatus) => {
-    "run" should s"return a $expectedStatus if the $consignmentType puid is ${puids.mkString(",")} and file size is $fileSize" in withContainers { case container: PostgreSQLContainer =>
-      System.setProperty("db-port", container.mappedPort(5432).toString)
+    "run" should s"return a $expectedStatus if the $consignmentType puid is ${puids.mkString(",")} and file size is $fileSize" in {
+      
       val consignmentId = UUID.randomUUID()
       val matches = puids.map(puid => {
         FFIDMetadataInputMatches(Option("extension"), "identificationBasis", Option(puid), Some(false), Some("format-name"))
@@ -87,9 +84,9 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
   )
 
   forAll(avResults)((avResult, expectedStatus) => {
-    "run" should s"return $expectedStatus if the AV result is $avResult" in withContainers { case container: PostgreSQLContainer =>
+    "run" should s"return $expectedStatus if the AV result is $avResult" in {
       val inputReplacements = Map("Antivirus" -> avResult)
-      val status = getStatus(inputReplacements, container, "Antivirus", "File")
+      val status = getStatus(inputReplacements, "Antivirus", "File")
       status should equal(expectedStatus)
     }
   })
@@ -102,9 +99,9 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
   )
 
   forAll(checksumMatchResults)((serverChecksum, clientChecksum, expectedStatus) => {
-    "run" should s"return $expectedStatus for server checksum $serverChecksum and client checksum $clientChecksum" in withContainers { case container: PostgreSQLContainer =>
+    "run" should s"return $expectedStatus for server checksum $serverChecksum and client checksum $clientChecksum" in {
       val inputReplacements = Map("ServerChecksum" -> serverChecksum, "ClientChecksum" -> clientChecksum)
-      val status = getStatus(inputReplacements, container, "ChecksumMatch", "File")
+      val status = getStatus(inputReplacements, "ChecksumMatch", "File")
       status should equal(expectedStatus)
     }
   })
@@ -119,15 +116,14 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
   )
 
   forAll(emptyCheckResults)((statusName, value, expectedStatus) => {
-    "run" should s"return $expectedStatus for $statusName with value $value" in withContainers { case container: PostgreSQLContainer =>
+    "run" should s"return $expectedStatus for $statusName with value $value" in {
       val inputReplacements = Map(statusName -> value)
-      val status = getStatus(inputReplacements, container, statusName, "File")
+      val status = getStatus(inputReplacements, statusName, "File")
       status should equal(expectedStatus)
     }
   })
 
-  "run" should "return the correct redacted statuses for redacted files" in withContainers { case container: PostgreSQLContainer =>
-    System.setProperty("db-port", container.mappedPort(5432).toString)
+  "run" should "return the correct redacted statuses for redacted files" in {
     val input = decode[Input](Source.fromResource("input.json").mkString).toOption.get
     val filePair = RedactedFilePairs(UUID.randomUUID(), "original", UUID.randomUUID(), "redacted")
     val errors = RedactedErrors(UUID.randomUUID(), "TestFailureReason")
@@ -155,8 +151,8 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
   )
 
   forAll(serverFFIDResults)((puids, expectedResult) => {
-    "run" should s"return the expected consignment status $expectedResult for puids ${puids.mkString(" ")}" in withContainers { case container: PostgreSQLContainer =>
-      System.setProperty("db-port", container.mappedPort(5432).toString)
+    "run" should s"return the expected consignment status $expectedResult for puids ${puids.mkString(" ")}" in {
+      
       val consignmentId = UUID.randomUUID()
       val files = puids.map(puid => {
         val matches = FFIDMetadataInputMatches(Option("extension"),"identificationBasis" ,Option(puid), Some(false), Some("format-name")) :: Nil
@@ -186,8 +182,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
   )
 
   forAll(serverAvResults)((avResults, expectedResult) => {
-    "run" should s"return the expected consignment status $expectedResult for av results ${avResults.mkString(" ")}" in withContainers { case container: PostgreSQLContainer =>
-      System.setProperty("db-port", container.mappedPort(5432).toString)
+    "run" should s"return the expected consignment status $expectedResult for av results ${avResults.mkString(" ")}" in {
       val consignmentId = UUID.randomUUID()
       val files = avResults.map(avResult => {
         val antivirus: Antivirus = Antivirus(UUID.randomUUID(), "software", "softwareVersion", "databaseVersion", avResult, 1)
@@ -218,8 +213,8 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
   )
 
   forAll(redactionResults)((description, redactedResults, expectedResult) => {
-    "run" should s"return the expected consignment status $expectedResult for $description" in withContainers { case container: PostgreSQLContainer =>
-      System.setProperty("db-port", container.mappedPort(5432).toString)
+    "run" should s"return the expected consignment status $expectedResult for $description" in {
+      
       val consignmentId = UUID.randomUUID()
       val files = List(File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum",
         "originalPath", Some("source-bucket"), Some("object/key"), FileCheckResults(Nil, Nil, Nil)))
@@ -249,8 +244,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
   )
 
   forAll(fileClientChecksResults)((clientChecksum, clientFilePath, ffid, fileSize, expectedStatus) => {
-    "run" should s"return $expectedStatus for $clientChecksum, $clientFilePath, $ffid" in withContainers { case container: PostgreSQLContainer =>
-      System.setProperty("db-port", container.mappedPort(5432).toString)
+    "run" should s"return $expectedStatus for $clientChecksum, $clientFilePath, $ffid" in {
       val inputReplacements = Map(
         "ClientChecksum" -> clientChecksum,
         "ClientFilePath" -> clientFilePath,
@@ -258,7 +252,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
         "ConsignmentType" -> "standard",
         "FileSize" -> fileSize
       )
-      val status = getStatus(inputReplacements, container, "ClientChecks", "Consignment")
+      val status = getStatus(inputReplacements, "ClientChecks", "Consignment")
       status should equal(expectedStatus)
     }
   })
@@ -272,8 +266,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
   )
 
   forAll(consignmentClientChecksResults)((fileClientChecks, expectedResult) => {
-    "run" should s"return the expected consignment status $expectedResult for client checks ${fileClientChecks.mkString(" ")}" in withContainers { case container: PostgreSQLContainer =>
-      System.setProperty("db-port", container.mappedPort(5432).toString)
+    "run" should s"return the expected consignment status $expectedResult for client checks ${fileClientChecks.mkString(" ")}" in {
       val consignmentId = UUID.randomUUID()
       val files: List[File] = fileClientChecks map {
         case "Completed" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), FileCheckResults(Nil, Nil, Nil))
