@@ -99,11 +99,5 @@ The lambda processes the following file statuses for each file.
 * Call this new method in the `statusChecks` method in the `Lambda` class and return the result in the `yield` block.
 * Add a test in Lambda test for this status.
 
-## RDS Certificate
-To connect to the database, we need to use the RDS CA certificate provided by AWS. 
-This is currently stored in src/main/resources. This is a public certificate available for download. It does change but only every 4-5 years and AWS will notify us before this happens. 
-When it happens, it will need to be updated. 
-
 ## Running locally
 There is a `LambdaRunner` class which can be run. You can change the input json as necessary.
-You will need to set the `DB_PASSWORD` environment to the password of your local database and `USER_NAME` to the username. 
