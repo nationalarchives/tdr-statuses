@@ -16,9 +16,7 @@ class Lambda {
   private val backendChecksUtils = BackendCheckUtils(sys.env("S3_ENDPOINT"))
 
   private def statusProcessor(input: Input): IO[StatusProcessor[IO]] = for {
-    databaseConfig <- DatabaseConfig[IO]()
-    credentials <- databaseConfig.credentials
-    allPuids <- PuidRepository[IO](credentials).allPuids
+    allPuids <- PuidJsonReader().allPuids
     processor <- StatusProcessor[IO](input, allPuids)
   } yield processor
 

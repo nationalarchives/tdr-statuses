@@ -8,21 +8,15 @@ lazy val root = (project in file("."))
   .settings(
     name := "tdr-statuses",
     libraryDependencies ++= Seq(
-      awsRds,
-      awsSsm,
       awsS3,
       backendCheckUtils,
       circeCore,
       circeParser,
       circeGeneric,
-      doobie,
-      postgres,
-      pureConfig,
-      catsTesting % Test,
+      metadataSchema,
+      catsEffect,
       mockito % Test,
       scalaTest % Test,
-      testContainersScala % Test,
-      testContainersPostgres % Test,
       wiremock % Test
     ),
     assembly / assemblyJarName := "statuses.jar"
@@ -34,7 +28,5 @@ lazy val root = (project in file("."))
 }
 
 Test / fork := true
-Test / javaOptions += s"-Dconfig.file=${sourceDirectory.value}/test/resources/application.conf"
 (Test / fork) := true
-(Test / javaOptions) += s"-Dconfig.file=${sourceDirectory.value}/test/resources/application.conf"
 (Test / envVars) := Map("AWS_ACCESS_KEY_ID" -> "test", "AWS_SECRET_ACCESS_KEY" -> "test", "S3_ENDPOINT" -> "http://localhost:9005")
