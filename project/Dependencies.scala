@@ -15,7 +15,7 @@ object Dependencies {
   lazy val scalaTest = "org.scalatest" %% "scalatest" % "3.2.19"
   lazy val testContainersScala = "com.dimafeng" %% "testcontainers-scala-scalatest" % testContainersVersion
   lazy val testContainersPostgres = "com.dimafeng" %% "testcontainers-scala-postgresql" % testContainersVersion
-  lazy val mockito = "org.mockito" %% "mockito-scala" % "2.0.0"
+  lazy val mockito = "org.mockito" %% "mockito-scala" % "2.1.0"
   lazy val wiremock = "com.github.tomakehurst" % "wiremock" % "3.0.1"
   lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.120"
   lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.6.3"
