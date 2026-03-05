@@ -9,6 +9,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers._
 import org.scalatest.prop.{TableFor2, TableFor3, TableFor4, TableFor5}
 import uk.gov.nationalarchives.BackendCheckUtils._
+import uk.gov.nationalarchives.services.FileCheckStatusEvaluator
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.UUID
@@ -69,7 +70,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
       val output = new ByteArrayOutputStream()
-      new Lambda().run(input, output)
+      new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
 
       val result = getInputFromS3().statuses
       val ffidStatus = result.statuses.find(_.statusName == "FFID").get
@@ -133,7 +134,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
     val outputStream = new ByteArrayOutputStream()
 
-    new Lambda().run(new ByteArrayInputStream(s3Input.getBytes()), outputStream)
+    new Lambda(FileCheckStatusEvaluator.noOp).run(new ByteArrayInputStream(s3Input.getBytes()), outputStream)
 
     val result = getInputFromS3().statuses
     val redactionStatuses = result.statuses.filter(_.statusName == "Redaction")
@@ -163,7 +164,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
       val output = new ByteArrayOutputStream()
-      new Lambda().run(input, output)
+      new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
 
       val result = getInputFromS3().statuses
       val serverFFIDStatuses = result.statuses.filter(_.statusName == "ServerFFID")
@@ -193,7 +194,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
       val output = new ByteArrayOutputStream()
-      new Lambda().run(input, output)
+      new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
 
       val result = getInputFromS3().statuses
       val serverAVStatuses = result.statuses.filter(_.statusName == "ServerAntivirus")
@@ -223,7 +224,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
       val output = new ByteArrayOutputStream()
-      new Lambda().run(input, output)
+      new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
 
       val result = getInputFromS3().statuses
       val serverRedaction = result.statuses.filter(_.statusName == "ServerRedaction")
@@ -276,7 +277,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
       val output = new ByteArrayOutputStream()
-      new Lambda().run(input, output)
+      new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
 
       val result = getInputFromS3().statuses
       val clientChecksStatuses = result.statuses.filter(s => s.statusName == "ClientChecks" && s.statusType == "Consignment")
@@ -311,7 +312,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
       val output = new ByteArrayOutputStream()
-      new Lambda().run(input, output)
+      new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
 
       val result = getInputFromS3().statuses
       result.statuses.count(s => s.statusName == "Antivirus" && s.statusValue == "Failed") should equal(missingInfoCount)
@@ -326,7 +327,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
       val output = new ByteArrayOutputStream()
-      new Lambda().run(input, output)
+      new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
 
       val result = getInputFromS3().statuses
       result.statuses.count(s => s.statusName == "ServerChecksum" && s.statusType == "File" && s.statusValue == "Failed") should equal(missingInfoCount)
@@ -341,7 +342,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
       val output = new ByteArrayOutputStream()
-      new Lambda().run(input, output)
+      new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
 
       val result = getInputFromS3().statuses
       result.statuses.count(s => s.statusName == "FFID" && s.statusValue == "Failed") should equal(missingInfoCount)
@@ -358,7 +359,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
     val input = new ByteArrayInputStream(s3Input.getBytes())
     val output = new ByteArrayOutputStream()
-    new Lambda().run(input, output)
+    new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
 
     val result = getInputFromS3().statuses
     result.statuses.find(_.statusName == "FFID").get.statusValue should equal("Failed")

@@ -9,12 +9,18 @@ lazy val root = (project in file("."))
     name := "tdr-statuses",
     libraryDependencies ++= Seq(
       awsS3,
+      awsSns,
+      awsSsm,
       backendCheckUtils,
       circeCore,
       circeParser,
       circeGeneric,
       metadataSchema,
       catsEffect,
+      graphqlClient,
+      generatedGraphql,
+      authUtils,
+      typesafeConfig,
       mockito % Test,
       scalaTest % Test,
       wiremock % Test

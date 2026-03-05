@@ -4,10 +4,12 @@ object Dependencies {
   private val circeVersion = "0.14.15"
 
   private val testContainersVersion = "0.44.1"
-  private val awsVersion = "2.42.4"
+  private val awsVersion = "2.42.6"
   private val doobieVersion = "1.0.0-RC11"
 
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
+  lazy val awsSns = "software.amazon.awssdk" % "sns" % awsVersion
+  lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
   lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.192"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
@@ -19,4 +21,8 @@ object Dependencies {
   lazy val wiremock = "com.github.tomakehurst" % "wiremock" % "3.0.1"
   lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.120"
   lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.6.3"
+  lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.278"
+  lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.457"
+  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.276"
+  lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.2"
 }
