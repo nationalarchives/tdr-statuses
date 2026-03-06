@@ -3,9 +3,7 @@ package uk.gov.nationalarchives
 import cats.effect.unsafe.implicits.global
 import io.circe.generic.auto._
 import io.circe.parser.decode
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.{any => mockitoAny}
-import org.mockito.MockitoSugar
+import org.mockito.{ArgumentCaptor, ArgumentMatchers, Mockito}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import software.amazon.awssdk.services.sns.SnsClient
@@ -15,7 +13,7 @@ import uk.gov.nationalarchives.services.NotificationService.FileCheckFailureEven
 
 import java.util.UUID
 
-class NotificationServiceSpec extends AnyWordSpec with Matchers with MockitoSugar {
+class NotificationServiceSpec extends AnyWordSpec with Matchers {
 
   private val consignmentId = UUID.randomUUID()
   private val userId = UUID.randomUUID()
@@ -31,11 +29,11 @@ class NotificationServiceSpec extends AnyWordSpec with Matchers with MockitoSuga
 
   "sendFileCheckFailureNotification" should {
     "publish a correctly formatted message to SNS" in {
-      val mockSnsClient = mock[SnsClient]
+      val mockSnsClient = Mockito.mock(classOf[SnsClient])
       val mockResponse = PublishResponse.builder().messageId("msg-123").build()
       val captor = ArgumentCaptor.forClass(classOf[PublishRequest])
 
-      when(mockSnsClient.publish(captor.capture())).thenReturn(mockResponse)
+      Mockito.when(mockSnsClient.publish(captor.capture())).thenReturn(mockResponse)
 
       val service = NotificationService(mockSnsClient, topicArn)
       val result = service.sendFileCheckFailureNotification(details).unsafeRunSync()
@@ -51,17 +49,17 @@ class NotificationServiceSpec extends AnyWordSpec with Matchers with MockitoSuga
       val parsed = event.toOption.get
       parsed.consignmentType shouldBe "standard"
       parsed.consignmentReference shouldBe "TDR-2025-ABC"
-      parsed.consignmentId shouldBe consignmentId.toString
+      parsed.consignmentId shouldBe consignmentId
       parsed.transferringBody shouldBe "Test Body"
-      parsed.userId shouldBe userId.toString
+      parsed.userId shouldBe userId
     }
 
     "default consignmentType to Unknown when None" in {
-      val mockSnsClient = mock[SnsClient]
+      val mockSnsClient = Mockito.mock(classOf[SnsClient])
       val mockResponse = PublishResponse.builder().messageId("msg-456").build()
       val captor = ArgumentCaptor.forClass(classOf[PublishRequest])
 
-      when(mockSnsClient.publish(captor.capture())).thenReturn(mockResponse)
+      Mockito.when(mockSnsClient.publish(captor.capture())).thenReturn(mockResponse)
 
       val detailsNoType = details.copy(consignmentType = None, transferringBody = None)
       val service = NotificationService(mockSnsClient, topicArn)
@@ -73,9 +71,9 @@ class NotificationServiceSpec extends AnyWordSpec with Matchers with MockitoSuga
     }
 
     "propagate SNS client errors" in {
-      val mockSnsClient = mock[SnsClient]
+      val mockSnsClient = Mockito.mock(classOf[SnsClient])
 
-      when(mockSnsClient.publish(mockitoAny[PublishRequest]))
+      Mockito.when(mockSnsClient.publish(ArgumentMatchers.any[PublishRequest]()))
         .thenThrow(new RuntimeException("SNS unavailable"))
 
       val service = NotificationService(mockSnsClient, topicArn)

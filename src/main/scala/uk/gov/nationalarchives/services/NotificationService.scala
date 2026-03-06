@@ -7,15 +7,17 @@ import software.amazon.awssdk.services.sns.SnsClient
 import software.amazon.awssdk.services.sns.model.{PublishRequest, PublishResponse}
 import uk.gov.nationalarchives.services.NotificationService.FileCheckFailureEvent
 
+import java.util.UUID
+
 class NotificationService(snsClient: SnsClient, topicArn: String) {
 
   def sendFileCheckFailureNotification(details: ConsignmentDetails): IO[PublishResponse] = {
     val event = FileCheckFailureEvent(
       consignmentType = details.consignmentType.getOrElse("Unknown"),
       consignmentReference = details.consignmentReference,
-      consignmentId = details.consignmentId.toString,
+      consignmentId = details.consignmentId,
       transferringBody = details.transferringBody.getOrElse("Unknown"),
-      userId = details.userId.toString
+      userId = details.userId
     )
 
     IO.blocking {
@@ -34,9 +36,9 @@ object NotificationService {
   case class FileCheckFailureEvent(
     consignmentType: String,
     consignmentReference: String,
-    consignmentId: String,
+    consignmentId: UUID,
     transferringBody: String,
-    userId: String
+    userId: UUID
   )
 
   def apply(snsClient: SnsClient, topicArn: String): NotificationService =
