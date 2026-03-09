@@ -11,7 +11,8 @@ class FileCheckStatusEvaluator(
   notificationService: NotificationService
 ) {
 
-  def shouldSendFailureNotification(statuses: List[Status]): Boolean = statuses.nonEmpty
+  def shouldSendFailureNotification(statuses: List[Status]): Boolean =
+    statuses.exists(s => s.statusType == "Consignment" && s.statusValue != "Completed")
 
   def processAndNotify(consignmentId: UUID, statuses: List[Status]): IO[Option[PublishResponse]] = {
     if (shouldSendFailureNotification(statuses)) {

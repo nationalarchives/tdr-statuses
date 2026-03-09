@@ -18,6 +18,7 @@ class NotificationServiceSpec extends AnyWordSpec with Matchers {
   private val consignmentId = UUID.randomUUID()
   private val userId = UUID.randomUUID()
   private val topicArn = "arn:aws:sns:eu-west-2:123456789:test-topic"
+  private val environment = "integration"
 
   private val details = ConsignmentDetails(
     consignmentId = consignmentId,
@@ -35,7 +36,7 @@ class NotificationServiceSpec extends AnyWordSpec with Matchers {
 
       Mockito.when(mockSnsClient.publish(captor.capture())).thenReturn(mockResponse)
 
-      val service = NotificationService(mockSnsClient, topicArn)
+      val service = NotificationService(mockSnsClient, topicArn, environment)
       val result = service.sendFileCheckFailureNotification(details).unsafeRunSync()
 
       result.messageId() shouldBe "msg-123"
@@ -52,6 +53,7 @@ class NotificationServiceSpec extends AnyWordSpec with Matchers {
       parsed.consignmentId shouldBe consignmentId
       parsed.transferringBody shouldBe "Test Body"
       parsed.userId shouldBe userId
+      parsed.environment shouldBe "integration"
     }
 
     "default consignmentType to Unknown when None" in {
@@ -62,7 +64,7 @@ class NotificationServiceSpec extends AnyWordSpec with Matchers {
       Mockito.when(mockSnsClient.publish(captor.capture())).thenReturn(mockResponse)
 
       val detailsNoType = details.copy(consignmentType = None, transferringBody = None)
-      val service = NotificationService(mockSnsClient, topicArn)
+      val service = NotificationService(mockSnsClient, topicArn, environment)
       service.sendFileCheckFailureNotification(detailsNoType).unsafeRunSync()
 
       val event = decode[FileCheckFailureEvent](captor.getValue.message()).toOption.get
@@ -76,7 +78,7 @@ class NotificationServiceSpec extends AnyWordSpec with Matchers {
       Mockito.when(mockSnsClient.publish(ArgumentMatchers.any[PublishRequest]()))
         .thenThrow(new RuntimeException("SNS unavailable"))
 
-      val service = NotificationService(mockSnsClient, topicArn)
+      val service = NotificationService(mockSnsClient, topicArn, environment)
 
       assertThrows[RuntimeException] {
         service.sendFileCheckFailureNotification(details).unsafeRunSync()

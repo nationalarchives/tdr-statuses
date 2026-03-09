@@ -9,7 +9,7 @@ import uk.gov.nationalarchives.services.NotificationService.FileCheckFailureEven
 
 import java.util.UUID
 
-class NotificationService(snsClient: SnsClient, topicArn: String) {
+class NotificationService(snsClient: SnsClient, topicArn: String, environment: String) {
 
   def sendFileCheckFailureNotification(details: ConsignmentDetails): IO[PublishResponse] = {
     val event = FileCheckFailureEvent(
@@ -17,7 +17,8 @@ class NotificationService(snsClient: SnsClient, topicArn: String) {
       consignmentReference = details.consignmentReference,
       consignmentId = details.consignmentId,
       transferringBody = details.transferringBody.getOrElse("Unknown"),
-      userId = details.userId
+      userId = details.userId,
+      environment = environment
     )
 
     IO.blocking {
@@ -38,10 +39,11 @@ object NotificationService {
     consignmentReference: String,
     consignmentId: UUID,
     transferringBody: String,
-    userId: UUID
+    userId: UUID,
+    environment: String
   )
 
-  def apply(snsClient: SnsClient, topicArn: String): NotificationService =
-    new NotificationService(snsClient, topicArn)
+  def apply(snsClient: SnsClient, topicArn: String, environment: String): NotificationService =
+    new NotificationService(snsClient, topicArn, environment)
 }
 

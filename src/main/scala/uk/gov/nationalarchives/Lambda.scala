@@ -19,8 +19,6 @@ class Lambda(fileCheckStatusEvaluator: => FileCheckStatusEvaluator = Lambda.defa
 
   private val backendChecksUtils = BackendCheckUtils(sys.env("S3_ENDPOINT"))
 
-
-  // ...existing code...
   private def statusProcessor(input: Input): IO[StatusProcessor[IO]] = for {
     allPuids <- PuidJsonReader().allPuids
     processor <- StatusProcessor[IO](input, allPuids)
@@ -70,9 +68,9 @@ object Lambda {
     .build()
 
   private lazy val notificationService: NotificationService =
-    NotificationService(snsClient, config.getString("sns.topicArn"))
+    NotificationService(snsClient, config.getString("sns.topicArn"), config.getString("environment"))
 
-  lazy val defaultEvaluator: FileCheckStatusEvaluator =
+  private lazy val defaultEvaluator: FileCheckStatusEvaluator =
     FileCheckStatusEvaluator(GraphQlApiService.service, notificationService)
 }
 

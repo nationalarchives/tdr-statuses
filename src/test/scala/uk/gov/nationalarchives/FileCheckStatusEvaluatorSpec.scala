@@ -25,23 +25,49 @@ class FileCheckStatusEvaluatorSpec extends AnyWordSpec with Matchers with Mockit
     userId = userId
   )
 
-  "shouldSendFailureNotification" should {
-    "return true when statuses are non-empty" in {
-      val evaluator = FileCheckStatusEvaluator(mock[GraphQlApiService], mock[NotificationService])
-      val statuses = List(Status(UUID.randomUUID(), "Consignment", "ServerAntivirus", "CompletedWithIssues"))
+  private def evaluator: FileCheckStatusEvaluator =
+    FileCheckStatusEvaluator(mock[GraphQlApiService], mock[NotificationService])
 
+  "shouldSendFailureNotification" should {
+    "return true when a Consignment status has value Failed" in {
+      val statuses = List(
+        Status(consignmentId, "Consignment", "ServerChecksum", "Failed"),
+        Status(consignmentId, "Consignment", "ServerAntivirus", "Completed")
+      )
       evaluator.shouldSendFailureNotification(statuses) shouldBe true
     }
 
+    "return true when a Consignment status has value CompletedWithIssues" in {
+      val statuses = List(
+        Status(consignmentId, "Consignment", "ServerAntivirus", "CompletedWithIssues")
+      )
+      evaluator.shouldSendFailureNotification(statuses) shouldBe true
+    }
+
+    "return false when all Consignment statuses are Completed" in {
+      val statuses = List(
+        Status(consignmentId, "Consignment", "ServerChecksum", "Completed"),
+        Status(consignmentId, "Consignment", "ServerAntivirus", "Completed"),
+        Status(UUID.randomUUID(), "File", "FFID", "Failed")
+      )
+      evaluator.shouldSendFailureNotification(statuses) shouldBe false
+    }
+
+    "return false when there are only File-level statuses" in {
+      val statuses = List(
+        Status(UUID.randomUUID(), "File", "Antivirus", "Failed")
+      )
+      evaluator.shouldSendFailureNotification(statuses) shouldBe false
+    }
+
     "return false when statuses are empty" in {
-      val evaluator = FileCheckStatusEvaluator(mock[GraphQlApiService], mock[NotificationService])
 
       evaluator.shouldSendFailureNotification(Nil) shouldBe false
     }
   }
 
   "processAndNotify" should {
-    "fetch consignment details and send notification when statuses are non-empty" in {
+    "send notification when a Consignment status is not Completed" in {
       val mockGraphQl = mock[GraphQlApiService]
       val mockNotification = mock[NotificationService]
       val mockResponse = PublishResponse.builder().messageId("msg-123").build()
@@ -51,22 +77,37 @@ class FileCheckStatusEvaluatorSpec extends AnyWordSpec with Matchers with Mockit
       when(mockNotification.sendFileCheckFailureNotification(any[ConsignmentDetails]))
         .thenReturn(IO.pure(mockResponse))
 
-      val evaluator = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
-
-      val statuses = List(Status(UUID.randomUUID(), "Consignment", "ServerAntivirus", "CompletedWithIssues"))
-      val result = evaluator.processAndNotify(consignmentId, statuses).unsafeRunSync()
+      val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
+      val statuses = List(Status(consignmentId, "Consignment", "ServerAntivirus", "Failed"))
+      val result = eval.processAndNotify(consignmentId, statuses).unsafeRunSync()
 
       result shouldBe Some(mockResponse)
       verify(mockGraphQl).getConsignmentDetails(consignmentId)
       verify(mockNotification).sendFileCheckFailureNotification(details)
     }
 
-    "return None and not call services when statuses are empty" in {
+    "return None when all Consignment statuses are Completed" in {
       val mockGraphQl = mock[GraphQlApiService]
       val mockNotification = mock[NotificationService]
 
-      val evaluator = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
-      val result = evaluator.processAndNotify(consignmentId, Nil).unsafeRunSync()
+      val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
+      val statuses = List(
+        Status(consignmentId, "Consignment", "ServerChecksum", "Completed"),
+        Status(consignmentId, "Consignment", "ServerAntivirus", "Completed")
+      )
+      val result = eval.processAndNotify(consignmentId, statuses).unsafeRunSync()
+
+      result shouldBe None
+      verifyZeroInteractions(mockGraphQl)
+      verifyZeroInteractions(mockNotification)
+    }
+
+    "return None when statuses are empty" in {
+      val mockGraphQl = mock[GraphQlApiService]
+      val mockNotification = mock[NotificationService]
+
+      val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
+      val result = eval.processAndNotify(consignmentId, Nil).unsafeRunSync()
 
       result shouldBe None
       verifyZeroInteractions(mockGraphQl)
