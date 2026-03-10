@@ -4,7 +4,7 @@ object Dependencies {
   private val circeVersion = "0.14.15"
 
   private val testContainersVersion = "0.44.1"
-  private val awsVersion = "2.42.8"
+  private val awsVersion = "2.42.9"
   private val doobieVersion = "1.0.0-RC11"
 
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
@@ -18,5 +18,5 @@ object Dependencies {
   lazy val mockito = "org.mockito" %% "mockito-scala" % "2.1.0"
   lazy val wiremock = "com.github.tomakehurst" % "wiremock" % "3.0.1"
   lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.121"
-  lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.6.3"
+  lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.7.0"
 }
