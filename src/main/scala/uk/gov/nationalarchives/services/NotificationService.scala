@@ -16,7 +16,7 @@ class NotificationService(snsClient: SnsClient, topicArn: String, environment: S
       consignmentType = details.consignmentType.getOrElse("Unknown"),
       consignmentReference = details.consignmentReference,
       consignmentId = details.consignmentId,
-      transferringBody = details.transferringBody.getOrElse("Unknown"),
+      transferringBodyName = details.transferringBody.getOrElse("Unknown"),
       userId = details.userId,
       environment = environment
     )
@@ -35,12 +35,12 @@ class NotificationService(snsClient: SnsClient, topicArn: String, environment: S
 object NotificationService {
 
   case class FileCheckFailureEvent(
-    consignmentType: String,
-    consignmentReference: String,
-    consignmentId: UUID,
-    transferringBody: String,
-    userId: UUID,
-    environment: String
+                                    consignmentType: String,
+                                    consignmentReference: String,
+                                    consignmentId: UUID,
+                                    transferringBodyName: String,
+                                    userId: UUID,
+                                    environment: String
   )
 
   def apply(snsClient: SnsClient, topicArn: String, environment: String): NotificationService =

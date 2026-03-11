@@ -5,10 +5,15 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken
 import com.typesafe.config.{Config, ConfigFactory}
 import graphql.codegen.GetConsignment.{getConsignment => gc}
 import graphql.codegen.GetConsignmentType.{getConsignmentType => gct}
+import software.amazon.awssdk.http.apache.ApacheHttpClient
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.ssm.SsmClient
+import software.amazon.awssdk.services.ssm.model.GetParameterRequest
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend}
 import uk.gov.nationalarchives.tdr.GraphQLClient
 import uk.gov.nationalarchives.tdr.keycloak.{KeycloakUtils, TdrKeycloakDeployment}
 
+import java.net.URI
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -24,16 +29,18 @@ final case class ConsignmentDetails(
 )
 
 class GraphQlApiService(
-  consignmentClient: GraphQLClient[gc.Data, gc.Variables],
-  consignmentTypeClient: GraphQLClient[gct.Data, gct.Variables],
-  keycloakUtils: KeycloakUtils,
-  clientId: String,
-  clientSecret: String
+                         consignmentClient: GraphQLClient[gc.Data, gc.Variables],
+                         consignmentTypeClient: GraphQLClient[gct.Data, gct.Variables],
+                         keycloakUtils: KeycloakUtils,
+                         clientId: String,
+                         clientSecretProvider: () => String
+
 )(implicit backend: SttpBackend[Identity, Any], tdrKeycloakDeployment: TdrKeycloakDeployment) {
 
   def getConsignmentDetails(consignmentId: UUID): IO[ConsignmentDetails] = {
     for {
-      token       <- IO.fromFuture(IO(keycloakUtils.serviceAccountToken(clientId, clientSecret)))
+      clientSec   <- IO(clientSecretProvider())
+      token       <- IO.fromFuture(IO(keycloakUtils.serviceAccountToken(clientId, clientSec)))
       consignment <- getConsignment(token, consignmentId)
       consType    <- getConsignmentType(token, consignmentId)
     } yield ConsignmentDetails(
@@ -84,16 +91,30 @@ object GraphQlApiService {
 
   private lazy val keycloakUtils: KeycloakUtils = KeycloakUtils()
 
+  private def getClientSecret(secretPath: String, endpoint: String): String = {
+    val httpClient = ApacheHttpClient.builder.build
+    val ssmClient: SsmClient = SsmClient.builder()
+      .endpointOverride(URI.create(endpoint))
+      .httpClient(httpClient)
+      .region(Region.EU_WEST_2)
+      .build()
+    val getParameterRequest = GetParameterRequest.builder.name(secretPath).withDecryption(true).build
+    ssmClient.getParameter(getParameterRequest).parameter().value()
+  }
+
   lazy val service: GraphQlApiService = {
     implicit val backend: SttpBackend[Identity, Any] = configBackend
     implicit val keycloakDeployment: TdrKeycloakDeployment = tdrKeycloakDeployment
     val apiUrl = config.getString("api.url")
+    val secretPath = config.getString("auth.clientSecret")
+    val ssmEndpoint = config.getString("ssm.endpoint")
+
     new GraphQlApiService(
       new GraphQLClient[gc.Data, gc.Variables](apiUrl),
       new GraphQLClient[gct.Data, gct.Variables](apiUrl),
       keycloakUtils,
       config.getString("auth.clientId"),
-      config.getString("auth.clientSecret")
+      () => getClientSecret(secretPath, ssmEndpoint)
     )
   }
 
@@ -102,10 +123,10 @@ object GraphQlApiService {
     consignmentTypeClient: GraphQLClient[gct.Data, gct.Variables],
     keycloakUtils: KeycloakUtils,
     clientId: String = "test",
-    clientSecret: String = "test"
+    clientSecretProvider: () => String = () => "test"
   )(implicit
     backend: SttpBackend[Identity, Any],
     tdrKeycloakDeployment: TdrKeycloakDeployment
   ): GraphQlApiService =
-    new GraphQlApiService(consignmentClient, consignmentTypeClient, keycloakUtils, clientId, clientSecret)
+    new GraphQlApiService(consignmentClient, consignmentTypeClient, keycloakUtils, clientId, clientSecretProvider)
 }

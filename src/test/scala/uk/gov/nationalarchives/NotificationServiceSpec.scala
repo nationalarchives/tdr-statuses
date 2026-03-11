@@ -50,7 +50,7 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
         parsed.consignmentType shouldBe "standard"
         parsed.consignmentReference shouldBe "TDR-2025-ABC"
         parsed.consignmentId shouldBe consignmentId
-        parsed.transferringBody shouldBe "Test Body"
+        parsed.transferringBodyName shouldBe "Test Body"
         parsed.userId shouldBe userId
         parsed.environment shouldBe "integration"
       }
@@ -68,7 +68,7 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
       service.sendFileCheckFailureNotification(detailsNoType).asserting { _ =>
         val event = decode[FileCheckFailureEvent](captor.getValue.message()).toOption.get
         event.consignmentType shouldBe "Unknown"
-        event.transferringBody shouldBe "Unknown"
+        event.transferringBodyName shouldBe "Unknown"
       }
     }
 
