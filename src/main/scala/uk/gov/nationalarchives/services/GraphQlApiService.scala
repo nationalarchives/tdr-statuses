@@ -34,8 +34,8 @@ class GraphQlApiService(
   def getConsignmentDetails(consignmentId: UUID): IO[ConsignmentDetails] = {
     for {
       token       <- IO.fromFuture(IO(keycloakUtils.serviceAccountToken(clientId, clientSecret)))
-      consignment <- fetchConsignment(token, consignmentId)
-      consType    <- fetchConsignmentType(token, consignmentId)
+      consignment <- getConsignment(token, consignmentId)
+      consType    <- getConsignmentType(token, consignmentId)
     } yield ConsignmentDetails(
       consignmentId = consignmentId,
       consignmentType = consType.consignmentType,
@@ -45,7 +45,7 @@ class GraphQlApiService(
     )
   }
 
-  private def fetchConsignment(token: BearerAccessToken, consignmentId: UUID): IO[gc.GetConsignment] = {
+  private def getConsignment(token: BearerAccessToken, consignmentId: UUID): IO[gc.GetConsignment] = {
     val variables = gc.Variables(consignmentId)
     for {
       response    <- IO.fromFuture(IO(consignmentClient.getResult(token, gc.document, Some(variables))))
@@ -57,7 +57,7 @@ class GraphQlApiService(
     } yield consignment
   }
 
-  private def fetchConsignmentType(token: BearerAccessToken, consignmentId: UUID): IO[gct.GetConsignment] = {
+  private def getConsignmentType(token: BearerAccessToken, consignmentId: UUID): IO[gct.GetConsignment] = {
     val variables = gct.Variables(consignmentId)
     for {
       response    <- IO.fromFuture(IO(consignmentTypeClient.getResult(token, gct.document, Some(variables))))
