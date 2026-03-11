@@ -86,7 +86,7 @@ object GraphQlApiService {
 
   lazy val service: GraphQlApiService = {
     implicit val backend: SttpBackend[Identity, Any] = configBackend
-    implicit val tdrKeycloakDeployment: TdrKeycloakDeployment = tdrKeycloakDeployment
+    implicit val keycloakDeployment: TdrKeycloakDeployment = tdrKeycloakDeployment
     val apiUrl = config.getString("api.url")
     new GraphQlApiService(
       new GraphQLClient[gc.Data, gc.Variables](apiUrl),

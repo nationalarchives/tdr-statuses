@@ -1,10 +1,12 @@
 package uk.gov.nationalarchives
 
+import cats.effect.IO
 import io.circe.Printer
 import io.circe.Printer.noSpaces
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
+import org.mockito.ArgumentMatchers.{any, argThat}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers._
 import org.scalatest.prop.{TableFor2, TableFor3, TableFor4, TableFor5}
@@ -365,5 +367,26 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     result.statuses.find(_.statusName == "FFID").get.statusValue should equal("Failed")
     result.statuses.find(_.statusName == "Antivirus").get.statusValue should equal("Failed")
     result.statuses.find(_.statusName == "ChecksumMatch").get.statusValue should equal("Failed")
+  }
+
+  "run" should "invoke the evaluator's processAndNotify with the correct consignment ID and statuses" in {
+    val consignmentId = UUID.randomUUID()
+    val matches = FFIDMetadataInputMatches(Option("extension"), "identificationBasis", Option(allowedJudgmentPuid), Some(false), Some("format-name")) :: Nil
+    val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks) :: Nil
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+
+    val mockEvaluator = mock[FileCheckStatusEvaluator]
+    when(mockEvaluator.processAndNotify(any[UUID], any[List[Status]])).thenReturn(IO.pure(None))
+
+    val input = new ByteArrayInputStream(s3Input.getBytes())
+    val output = new ByteArrayOutputStream()
+    new Lambda(mockEvaluator).run(input, output)
+
+    verify(mockEvaluator).processAndNotify(
+      argThat[UUID]((id: UUID) => id == consignmentId),
+      argThat[List[Status]]((statuses: List[Status]) => statuses.nonEmpty)
+    )
   }
 }
