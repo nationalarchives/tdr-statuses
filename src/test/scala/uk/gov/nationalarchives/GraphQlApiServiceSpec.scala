@@ -19,7 +19,7 @@ import scala.concurrent.Future
 class GraphQlApiServiceSpec extends AnyWordSpec with Matchers with MockitoSugar {
 
   implicit val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
-  implicit val deployment: TdrKeycloakDeployment = TdrKeycloakDeployment("https://auth", "tdr", 3600)
+  implicit val tdrKeycloakDeployment: TdrKeycloakDeployment = TdrKeycloakDeployment("https://auth", "tdr", 3600)
 
   private val consignmentId: UUID = UUID.randomUUID()
   private val userId: UUID = UUID.randomUUID()
