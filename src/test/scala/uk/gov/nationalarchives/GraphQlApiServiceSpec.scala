@@ -1,13 +1,13 @@
 package uk.gov.nationalarchives
 
-import cats.effect.unsafe.implicits.global
+import cats.effect.testing.scalatest.AsyncIOSpec
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken
 import graphql.codegen.GetConsignment.{getConsignment => gc}
 import graphql.codegen.GetConsignmentType.{getConsignmentType => gct}
 import org.mockito.ArgumentMatchers._
 import org.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.wordspec.AsyncWordSpec
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend}
 import uk.gov.nationalarchives.services.{ConsignmentDetails, ConsignmentNotFound, GraphQlApiService}
 import uk.gov.nationalarchives.tdr.{GraphQLClient, GraphQlResponse}
@@ -16,7 +16,7 @@ import uk.gov.nationalarchives.tdr.keycloak.{KeycloakUtils, TdrKeycloakDeploymen
 import java.util.UUID
 import scala.concurrent.Future
 
-class GraphQlApiServiceSpec extends AnyWordSpec with Matchers with MockitoSugar {
+class GraphQlApiServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matchers with MockitoSugar {
 
   implicit val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
   implicit val tdrKeycloakDeployment: TdrKeycloakDeployment = TdrKeycloakDeployment("https://auth", "tdr", 3600)
@@ -63,15 +63,15 @@ class GraphQlApiServiceSpec extends AnyWordSpec with Matchers with MockitoSugar 
         GraphQlResponse(Some(gctData), Nil)
       )
 
-      val result = service.getConsignmentDetails(consignmentId).unsafeRunSync()
-
-      result shouldBe ConsignmentDetails(
-        consignmentId = consignmentId,
-        consignmentType = Some("standard"),
-        consignmentReference = "TDR-2025-ABC",
-        transferringBody = Some("Test Body"),
-        userId = userId
-      )
+      service.getConsignmentDetails(consignmentId).asserting { result =>
+        result shouldBe ConsignmentDetails(
+          consignmentId = consignmentId,
+          consignmentType = Some("standard"),
+          consignmentReference = "TDR-2025-ABC",
+          transferringBody = Some("Test Body"),
+          userId = userId
+        )
+      }
     }
 
     "raise ConsignmentNotFound when GetConsignment returns no consignment" in {
@@ -83,8 +83,8 @@ class GraphQlApiServiceSpec extends AnyWordSpec with Matchers with MockitoSugar 
         GraphQlResponse(Some(gctData), Nil)
       )
 
-      assertThrows[ConsignmentNotFound] {
-        service.getConsignmentDetails(consignmentId).unsafeRunSync()
+      service.getConsignmentDetails(consignmentId).attempt.asserting { result =>
+        result.left.toOption.get shouldBe a[ConsignmentNotFound]
       }
     }
 
@@ -106,8 +106,8 @@ class GraphQlApiServiceSpec extends AnyWordSpec with Matchers with MockitoSugar 
         GraphQlResponse(Some(gctData), Nil)
       )
 
-      assertThrows[ConsignmentNotFound] {
-        service.getConsignmentDetails(consignmentId).unsafeRunSync()
+      service.getConsignmentDetails(consignmentId).attempt.asserting { result =>
+        result.left.toOption.get shouldBe a[ConsignmentNotFound]
       }
     }
 
@@ -117,8 +117,8 @@ class GraphQlApiServiceSpec extends AnyWordSpec with Matchers with MockitoSugar 
         GraphQlResponse(Some(gct.Data(Some(gct.GetConsignment(Some("standard"))))), Nil)
       )
 
-      assertThrows[ConsignmentNotFound] {
-        service.getConsignmentDetails(consignmentId).unsafeRunSync()
+      service.getConsignmentDetails(consignmentId).attempt.asserting { result =>
+        result.left.toOption.get shouldBe a[ConsignmentNotFound]
       }
     }
   }

@@ -1,18 +1,18 @@
 package uk.gov.nationalarchives
 
 import cats.effect.IO
-import cats.effect.unsafe.implicits.global
+import cats.effect.testing.scalatest.AsyncIOSpec
 import org.mockito.ArgumentMatchers._
 import org.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.wordspec.AsyncWordSpec
 import software.amazon.awssdk.services.sns.model.PublishResponse
 import uk.gov.nationalarchives.BackendCheckUtils.Status
 import uk.gov.nationalarchives.services._
 
 import java.util.UUID
 
-class FileCheckStatusEvaluatorSpec extends AnyWordSpec with Matchers with MockitoSugar {
+class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with Matchers with MockitoSugar {
 
   private val consignmentId = UUID.randomUUID()
   private val userId = UUID.randomUUID()
@@ -79,11 +79,11 @@ class FileCheckStatusEvaluatorSpec extends AnyWordSpec with Matchers with Mockit
 
       val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
       val statuses = List(Status(consignmentId, "Consignment", "ServerAntivirus", "Failed"))
-      val result = eval.processAndNotify(consignmentId, statuses).unsafeRunSync()
-
-      result shouldBe Some(mockResponse)
-      verify(mockGraphQl).getConsignmentDetails(consignmentId)
-      verify(mockNotification).sendFileCheckFailureNotification(details)
+      eval.processAndNotify(consignmentId, statuses).asserting { result =>
+        verify(mockGraphQl).getConsignmentDetails(consignmentId)
+        verify(mockNotification).sendFileCheckFailureNotification(details)
+        result shouldBe Some(mockResponse)
+      }
     }
 
     "return None when all Consignment statuses are Completed" in {
@@ -95,11 +95,11 @@ class FileCheckStatusEvaluatorSpec extends AnyWordSpec with Matchers with Mockit
         Status(consignmentId, "Consignment", "ServerChecksum", "Completed"),
         Status(consignmentId, "Consignment", "ServerAntivirus", "Completed")
       )
-      val result = eval.processAndNotify(consignmentId, statuses).unsafeRunSync()
-
-      result shouldBe None
-      verifyZeroInteractions(mockGraphQl)
-      verifyZeroInteractions(mockNotification)
+      eval.processAndNotify(consignmentId, statuses).asserting { result =>
+        verifyZeroInteractions(mockGraphQl)
+        verifyZeroInteractions(mockNotification)
+        result shouldBe None
+      }
     }
 
     "return None when statuses are empty" in {
@@ -107,11 +107,11 @@ class FileCheckStatusEvaluatorSpec extends AnyWordSpec with Matchers with Mockit
       val mockNotification = mock[NotificationService]
 
       val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
-      val result = eval.processAndNotify(consignmentId, Nil).unsafeRunSync()
-
-      result shouldBe None
-      verifyZeroInteractions(mockGraphQl)
-      verifyZeroInteractions(mockNotification)
+      eval.processAndNotify(consignmentId, Nil).asserting { result =>
+        verifyZeroInteractions(mockGraphQl)
+        verifyZeroInteractions(mockNotification)
+        result shouldBe None
+      }
     }
   }
 }

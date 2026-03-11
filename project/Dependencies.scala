@@ -21,8 +21,9 @@ object Dependencies {
   lazy val wiremock = "com.github.tomakehurst" % "wiremock" % "3.0.1"
   lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.121"
   lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.6.3"
-  lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.278"
-  lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.457"
-  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.276"
-  lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.2"
+  lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.281"
+  lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.459"
+  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.277"
+  lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.6"
+  lazy val catsEffectTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.8.0"
 }

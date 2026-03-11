@@ -1,11 +1,11 @@
 package uk.gov.nationalarchives
 
-import cats.effect.unsafe.implicits.global
+import cats.effect.testing.scalatest.AsyncIOSpec
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import org.mockito.{ArgumentCaptor, ArgumentMatchers, Mockito}
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.wordspec.AsyncWordSpec
 import software.amazon.awssdk.services.sns.SnsClient
 import software.amazon.awssdk.services.sns.model.{PublishRequest, PublishResponse}
 import uk.gov.nationalarchives.services.{ConsignmentDetails, NotificationService}
@@ -13,7 +13,7 @@ import uk.gov.nationalarchives.services.NotificationService.FileCheckFailureEven
 
 import java.util.UUID
 
-class NotificationServiceSpec extends AnyWordSpec with Matchers {
+class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matchers {
 
   private val consignmentId = UUID.randomUUID()
   private val userId = UUID.randomUUID()
@@ -37,23 +37,23 @@ class NotificationServiceSpec extends AnyWordSpec with Matchers {
       Mockito.when(mockSnsClient.publish(captor.capture())).thenReturn(mockResponse)
 
       val service = NotificationService(mockSnsClient, topicArn, environment)
-      val result = service.sendFileCheckFailureNotification(details).unsafeRunSync()
+      service.sendFileCheckFailureNotification(details).asserting { result =>
+        result.messageId() shouldBe "msg-123"
 
-      result.messageId() shouldBe "msg-123"
+        val publishedRequest = captor.getValue
+        publishedRequest.topicArn() shouldBe topicArn
+        publishedRequest.subject() shouldBe "File Check Failure"
 
-      val publishedRequest = captor.getValue
-      publishedRequest.topicArn() shouldBe topicArn
-      publishedRequest.subject() shouldBe "File Check Failure"
-
-      val event = decode[FileCheckFailureEvent](publishedRequest.message())
-      event.isRight shouldBe true
-      val parsed = event.toOption.get
-      parsed.consignmentType shouldBe "standard"
-      parsed.consignmentReference shouldBe "TDR-2025-ABC"
-      parsed.consignmentId shouldBe consignmentId
-      parsed.transferringBody shouldBe "Test Body"
-      parsed.userId shouldBe userId
-      parsed.environment shouldBe "integration"
+        val event = decode[FileCheckFailureEvent](publishedRequest.message())
+        event.isRight shouldBe true
+        val parsed = event.toOption.get
+        parsed.consignmentType shouldBe "standard"
+        parsed.consignmentReference shouldBe "TDR-2025-ABC"
+        parsed.consignmentId shouldBe consignmentId
+        parsed.transferringBody shouldBe "Test Body"
+        parsed.userId shouldBe userId
+        parsed.environment shouldBe "integration"
+      }
     }
 
     "default consignmentType to Unknown when None" in {
@@ -65,11 +65,11 @@ class NotificationServiceSpec extends AnyWordSpec with Matchers {
 
       val detailsNoType = details.copy(consignmentType = None, transferringBody = None)
       val service = NotificationService(mockSnsClient, topicArn, environment)
-      service.sendFileCheckFailureNotification(detailsNoType).unsafeRunSync()
-
-      val event = decode[FileCheckFailureEvent](captor.getValue.message()).toOption.get
-      event.consignmentType shouldBe "Unknown"
-      event.transferringBody shouldBe "Unknown"
+      service.sendFileCheckFailureNotification(detailsNoType).asserting { _ =>
+        val event = decode[FileCheckFailureEvent](captor.getValue.message()).toOption.get
+        event.consignmentType shouldBe "Unknown"
+        event.transferringBody shouldBe "Unknown"
+      }
     }
 
     "propagate SNS client errors" in {
@@ -80,8 +80,8 @@ class NotificationServiceSpec extends AnyWordSpec with Matchers {
 
       val service = NotificationService(mockSnsClient, topicArn, environment)
 
-      assertThrows[RuntimeException] {
-        service.sendFileCheckFailureNotification(details).unsafeRunSync()
+      service.sendFileCheckFailureNotification(details).attempt.asserting { result =>
+        result.left.toOption.get shouldBe a[RuntimeException]
       }
     }
   }
