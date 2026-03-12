@@ -2,14 +2,14 @@ package uk.gov.nationalarchives
 
 import cats.effect.testing.scalatest.AsyncIOSpec
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken
-import graphql.codegen.GetConsignment.{getConsignment => gc}
-import graphql.codegen.GetConsignmentType.{getConsignmentType => gct}
+import graphql.codegen.GetConsignmentSummary.{getConsignmentSummary => gcs}
 import org.mockito.ArgumentMatchers._
 import org.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend}
-import uk.gov.nationalarchives.services.{ConsignmentDetails, ConsignmentNotFound, GraphQlApiService}
+import uk.gov.nationalarchives.BackendCheckUtils.FileCheckResults
+import uk.gov.nationalarchives.services.{ConsignmentDetails, ConsignmentSummaryNotFound, GraphQlApiService}
 import uk.gov.nationalarchives.tdr.{GraphQLClient, GraphQlResponse}
 import uk.gov.nationalarchives.tdr.keycloak.{KeycloakUtils, TdrKeycloakDeployment}
 
@@ -24,12 +24,23 @@ class GraphQlApiServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matchers
   private val consignmentId: UUID = UUID.randomUUID()
   private val userId: UUID = UUID.randomUUID()
 
+  private val file = uk.gov.nationalarchives.BackendCheckUtils.File(
+    consignmentId,
+    UUID.randomUUID(),
+    userId,
+    "standard",
+    "FileSize",
+    "Checksum": String,
+    "originalPath": String,
+    Some("3SourceBucket"): Option[String],
+    Some("s3SourceBucketKey"),
+    FileCheckResults(List.empty, List.empty, List.empty)
+  )
+
   private def createService(
-    gcResponse: GraphQlResponse[gc.Data],
-    gctResponse: GraphQlResponse[gct.Data]
+    gcResponse: GraphQlResponse[gcs.Data]
   ): GraphQlApiService = {
-    val mockConsignmentClient     = mock[GraphQLClient[gc.Data, gc.Variables]]
-    val mockConsignmentTypeClient = mock[GraphQLClient[gct.Data, gct.Variables]]
+    val mockConsignmentClient     = mock[GraphQLClient[gcs.Data, gcs.Variables]]
     val mockKeycloak              = mock[KeycloakUtils]
 
     when(mockKeycloak.serviceAccountToken(anyString(), anyString())(any(), any(), any()))
@@ -38,35 +49,27 @@ class GraphQlApiServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matchers
     when(mockConsignmentClient.getResult(any[BearerAccessToken], any(), any())(any(), any()))
       .thenReturn(Future.successful(gcResponse))
 
-    when(mockConsignmentTypeClient.getResult(any[BearerAccessToken], any(), any())(any(), any()))
-      .thenReturn(Future.successful(gctResponse))
 
-    GraphQlApiService(mockConsignmentClient, mockConsignmentTypeClient, mockKeycloak)
+    GraphQlApiService(mockConsignmentClient, mockKeycloak)
   }
 
   "getConsignmentDetails" should {
-    "return ConsignmentDetails when both queries return data" in {
-      val gcData = gc.Data(Some(gc.GetConsignment(
-        userid = userId,
-        seriesid = None,
-        parentFolder = None,
+    "return ConsignmentDetails when getConsignmentSummary returns data" in {
+      val gcsData = gcs.Data(Some(gcs.GetConsignment(
+        seriesName = None,
         consignmentReference = "TDR-2025-ABC",
-        parentFolderId = None,
-        clientSideDraftMetadataFileName = None,
-        transferringBodyName = Some("Test Body"),
-        consignmentStatuses = Nil
+        totalFiles = 100,
+        transferringBodyName = Some("Test Body")
       )))
-      val gctData = gct.Data(Some(gct.GetConsignment(consignmentType = Some("standard"))))
 
-      val service = createService(
-        GraphQlResponse(Some(gcData), Nil),
-        GraphQlResponse(Some(gctData), Nil)
+        val service = createService(
+        GraphQlResponse(Some(gcsData), Nil)
       )
 
-      service.getConsignmentDetails(consignmentId).asserting { result =>
+      service.getConsignmentDetails(file).asserting { result =>
         result shouldBe ConsignmentDetails(
           consignmentId = consignmentId,
-          consignmentType = Some("standard"),
+          consignmentType = "standard",
           consignmentReference = "TDR-2025-ABC",
           transferringBody = Some("Test Body"),
           userId = userId
@@ -74,51 +77,15 @@ class GraphQlApiServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matchers
       }
     }
 
-    "raise ConsignmentNotFound when GetConsignment returns no consignment" in {
-      val gcData  = gc.Data(None)
-      val gctData = gct.Data(Some(gct.GetConsignment(consignmentType = Some("standard"))))
+    "raise ConsignmentSummaryNotFound when GetConsignment returns no consignment" in {
+      val gcsData  = gcs.Data(None)
 
       val service = createService(
-        GraphQlResponse(Some(gcData), Nil),
-        GraphQlResponse(Some(gctData), Nil)
+        GraphQlResponse(Some(gcsData), Nil)
       )
 
-      service.getConsignmentDetails(consignmentId).attempt.asserting { result =>
-        result.left.toOption.get shouldBe a[ConsignmentNotFound]
-      }
-    }
-
-    "raise ConsignmentNotFound when GetConsignmentType returns no consignment" in {
-      val gcData = gc.Data(Some(gc.GetConsignment(
-        userid = userId,
-        seriesid = None,
-        parentFolder = None,
-        consignmentReference = "TDR-2025-ABC",
-        parentFolderId = None,
-        clientSideDraftMetadataFileName = None,
-        transferringBodyName = Some("Test Body"),
-        consignmentStatuses = Nil
-      )))
-      val gctData = gct.Data(None)
-
-      val service = createService(
-        GraphQlResponse(Some(gcData), Nil),
-        GraphQlResponse(Some(gctData), Nil)
-      )
-
-      service.getConsignmentDetails(consignmentId).attempt.asserting { result =>
-        result.left.toOption.get shouldBe a[ConsignmentNotFound]
-      }
-    }
-
-    "raise ConsignmentNotFound when GetConsignment returns no data" in {
-      val service = createService(
-        GraphQlResponse[gc.Data](None, Nil),
-        GraphQlResponse(Some(gct.Data(Some(gct.GetConsignment(Some("standard"))))), Nil)
-      )
-
-      service.getConsignmentDetails(consignmentId).attempt.asserting { result =>
-        result.left.toOption.get shouldBe a[ConsignmentNotFound]
+      service.getConsignmentDetails(file).attempt.asserting { result =>
+        result.left.toOption.get shouldBe a[ConsignmentSummaryNotFound]
       }
     }
   }

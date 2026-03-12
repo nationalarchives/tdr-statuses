@@ -51,7 +51,7 @@ class Lambda(fileCheckStatusEvaluator: => FileCheckStatusEvaluator = Lambda.defa
       resultString = Input(input.results, input.redactedResults, StatusResult(statuses)).asJson.printWith(Printer.noSpaces)
       _ <- IO.fromEither(backendChecksUtils.writeResultJson(s3Input.key, s3Input.bucket, resultString))
       _ <- input.results.headOption match {
-        case Some(result) => fileCheckStatusEvaluator.processAndNotify(result.consignmentId, statuses).void
+        case Some(result) => fileCheckStatusEvaluator.processAndNotify(result, statuses).void
         case None         => IO.unit
       }
     } yield s3Input

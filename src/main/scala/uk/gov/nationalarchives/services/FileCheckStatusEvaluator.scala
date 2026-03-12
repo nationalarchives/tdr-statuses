@@ -2,7 +2,7 @@ package uk.gov.nationalarchives.services
 
 import cats.effect.IO
 import software.amazon.awssdk.services.sns.model.PublishResponse
-import uk.gov.nationalarchives.BackendCheckUtils.Status
+import uk.gov.nationalarchives.BackendCheckUtils.{File, Status}
 
 import java.util.UUID
 
@@ -14,10 +14,10 @@ class FileCheckStatusEvaluator(
   def shouldSendFailureNotification(statuses: List[Status]): Boolean =
     statuses.exists(s => s.statusType == "Consignment" && s.statusValue != "Completed")
 
-  def processAndNotify(consignmentId: UUID, statuses: List[Status]): IO[Option[PublishResponse]] = {
+  def processAndNotify(result: File, statuses: List[Status]): IO[Option[PublishResponse]] = {
     if (shouldSendFailureNotification(statuses)) {
       for {
-        details  <- graphQlApiService.getConsignmentDetails(consignmentId)
+        details  <- graphQlApiService.getConsignmentDetails(result)
         response <- notificationService.sendFileCheckFailureNotification(details)
       } yield Some(response)
     } else {

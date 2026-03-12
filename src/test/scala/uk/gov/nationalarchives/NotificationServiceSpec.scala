@@ -22,7 +22,7 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
 
   private val details = ConsignmentDetails(
     consignmentId = consignmentId,
-    consignmentType = Some("standard"),
+    consignmentType = "standard",
     consignmentReference = "TDR-2025-ABC",
     transferringBody = Some("Test Body"),
     userId = userId
@@ -53,22 +53,6 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
         parsed.transferringBodyName shouldBe "Test Body"
         parsed.userId shouldBe userId
         parsed.environment shouldBe "integration"
-      }
-    }
-
-    "default consignmentType to Unknown when None" in {
-      val mockSnsClient = Mockito.mock(classOf[SnsClient])
-      val mockResponse = PublishResponse.builder().messageId("msg-456").build()
-      val captor = ArgumentCaptor.forClass(classOf[PublishRequest])
-
-      Mockito.when(mockSnsClient.publish(captor.capture())).thenReturn(mockResponse)
-
-      val detailsNoType = details.copy(consignmentType = None, transferringBody = None)
-      val service = NotificationService(mockSnsClient, topicArn, environment)
-      service.sendFileCheckFailureNotification(detailsNoType).asserting { _ =>
-        val event = decode[FileCheckFailureEvent](captor.getValue.message()).toOption.get
-        event.consignmentType shouldBe "Unknown"
-        event.transferringBodyName shouldBe "Unknown"
       }
     }
 

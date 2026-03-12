@@ -13,7 +13,7 @@ class NotificationService(snsClient: SnsClient, topicArn: String, environment: S
 
   def sendFileCheckFailureNotification(details: ConsignmentDetails): IO[PublishResponse] = {
     val event = FileCheckFailureEvent(
-      consignmentType = details.consignmentType.getOrElse("Unknown"),
+      consignmentType = details.consignmentType,
       consignmentReference = details.consignmentReference,
       consignmentId = details.consignmentId,
       transferringBodyName = details.transferringBody.getOrElse("Unknown"),

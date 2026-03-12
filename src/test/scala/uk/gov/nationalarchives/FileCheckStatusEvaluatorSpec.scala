@@ -7,7 +7,7 @@ import org.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
 import software.amazon.awssdk.services.sns.model.PublishResponse
-import uk.gov.nationalarchives.BackendCheckUtils.Status
+import uk.gov.nationalarchives.BackendCheckUtils.{File, FileCheckResults, Status}
 import uk.gov.nationalarchives.services._
 
 import java.util.UUID
@@ -19,10 +19,23 @@ class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with M
 
   private val details = ConsignmentDetails(
     consignmentId = consignmentId,
-    consignmentType = Some("standard"),
+    consignmentType = "standard",
     consignmentReference = "TDR-2025-ABC",
     transferringBody = Some("Test Body"),
     userId = userId
+  )
+
+  private val file = File(
+    consignmentId,
+    UUID.randomUUID(),
+    userId,
+    "standard",
+    "FileSize",
+    "Checksum": String,
+    "originalPath": String,
+    Some("3SourceBucket"): Option[String],
+    Some("s3SourceBucketKey"),
+    FileCheckResults(List.empty, List.empty, List.empty)
   )
 
   private def evaluator: FileCheckStatusEvaluator =
@@ -72,15 +85,15 @@ class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with M
       val mockNotification = mock[NotificationService]
       val mockResponse = PublishResponse.builder().messageId("msg-123").build()
 
-      when(mockGraphQl.getConsignmentDetails(any[UUID]))
+      when(mockGraphQl.getConsignmentDetails(any[File]))
         .thenReturn(IO.pure(details))
       when(mockNotification.sendFileCheckFailureNotification(any[ConsignmentDetails]))
         .thenReturn(IO.pure(mockResponse))
 
       val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
       val statuses = List(Status(consignmentId, "Consignment", "ServerAntivirus", "Failed"))
-      eval.processAndNotify(consignmentId, statuses).asserting { result =>
-        verify(mockGraphQl).getConsignmentDetails(consignmentId)
+      eval.processAndNotify(file, statuses).asserting { result =>
+        verify(mockGraphQl).getConsignmentDetails(file)
         verify(mockNotification).sendFileCheckFailureNotification(details)
         result shouldBe Some(mockResponse)
       }
@@ -95,7 +108,7 @@ class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with M
         Status(consignmentId, "Consignment", "ServerChecksum", "Completed"),
         Status(consignmentId, "Consignment", "ServerAntivirus", "Completed")
       )
-      eval.processAndNotify(consignmentId, statuses).asserting { result =>
+      eval.processAndNotify(file, statuses).asserting { result =>
         verifyZeroInteractions(mockGraphQl)
         verifyZeroInteractions(mockNotification)
         result shouldBe None
@@ -107,7 +120,7 @@ class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with M
       val mockNotification = mock[NotificationService]
 
       val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
-      eval.processAndNotify(consignmentId, Nil).asserting { result =>
+      eval.processAndNotify(file, Nil).asserting { result =>
         verifyZeroInteractions(mockGraphQl)
         verifyZeroInteractions(mockNotification)
         result shouldBe None
