@@ -41,12 +41,12 @@ class GraphQlApiService(
     for {
       clientSec   <- IO(clientSecretProvider())
       token       <- IO.fromFuture(IO(keycloakUtils.serviceAccountToken(clientId, clientSec)))
-      consignment <- getConsignmentSummary(token, result.consignmentId)
+      consignmentSummary <- getConsignmentSummary(token, result.consignmentId)
      } yield ConsignmentDetails(
       consignmentId = result.consignmentId,
       consignmentType = result.consignmentType,
-      consignmentReference = consignment.consignmentReference,
-      transferringBody = consignment.transferringBodyName,
+      consignmentReference = consignmentSummary.consignmentReference,
+      transferringBody = consignmentSummary.transferringBodyName,
       userId = result.userId
     )
   }
@@ -55,12 +55,12 @@ class GraphQlApiService(
     val variables = gcs.Variables(consignmentId)
     for {
       response    <- IO.fromFuture(IO(consignmentSummaryClient.getResult(token, gcs.document, Some(variables))))
-      consignment <- IO.fromEither(
+      consignmentSummary <- IO.fromEither(
         response.data
           .flatMap(_.getConsignment)
           .toRight(ConsignmentSummaryNotFound(consignmentId))
       )
-    } yield consignment
+    } yield consignmentSummary
   }
 }
 
