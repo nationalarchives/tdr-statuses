@@ -2,16 +2,22 @@ package uk.gov.nationalarchives
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
+import com.typesafe.config.ConfigFactory
 import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
+import software.amazon.awssdk.services.sns.SnsClient
+import uk.gov.nationalarchives.BackendCheckUtils._
+import uk.gov.nationalarchives.services.{FileCheckStatusEvaluator, GraphQlApiService, NotificationService}
 
 import java.io.{InputStream, OutputStream}
+import java.net.URI
 import scala.io.Source
-import uk.gov.nationalarchives.BackendCheckUtils._
 
-class Lambda {
+class Lambda(fileCheckStatusEvaluator: => FileCheckStatusEvaluator) {
+
+  def this() = this(Lambda.defaultEvaluator)
 
   private val backendChecksUtils = BackendCheckUtils(sys.env("S3_ENDPOINT"))
 
@@ -46,8 +52,27 @@ class Lambda {
       statuses <- statusChecks(processor)
       resultString = Input(input.results, input.redactedResults, StatusResult(statuses)).asJson.printWith(Printer.noSpaces)
       _ <- IO.fromEither(backendChecksUtils.writeResultJson(s3Input.key, s3Input.bucket, resultString))
+      _ <- input.results.headOption match {
+        case Some(result) => fileCheckStatusEvaluator.processAndNotify(result, statuses).void
+        case None         => IO.unit
+      }
     } yield s3Input
 
     outputStream.write(result.unsafeRunSync().asJson.printWith(Printer.noSpaces).getBytes())
   }
 }
+
+object Lambda {
+  private lazy val config = ConfigFactory.load()
+
+  private lazy val snsClient: SnsClient = SnsClient.builder()
+    .endpointOverride(URI.create(config.getString("sns.endpoint")))
+    .build()
+
+  private lazy val notificationService: NotificationService =
+    NotificationService(snsClient, config.getString("sns.topicArn"), config.getString("environment"))
+
+  private lazy val defaultEvaluator: FileCheckStatusEvaluator =
+    FileCheckStatusEvaluator(GraphQlApiService.service, notificationService)
+}
+
