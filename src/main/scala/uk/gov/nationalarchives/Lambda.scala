@@ -7,6 +7,7 @@ import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient
 import software.amazon.awssdk.services.sns.SnsClient
 import uk.gov.nationalarchives.BackendCheckUtils._
 import uk.gov.nationalarchives.services.{FileCheckStatusEvaluator, GraphQlApiService, NotificationService}
@@ -67,6 +68,7 @@ object Lambda {
 
   private lazy val snsClient: SnsClient = SnsClient.builder()
     .endpointOverride(URI.create(config.getString("sns.endpoint")))
+    .httpClient(UrlConnectionHttpClient.builder().build())
     .build()
 
   private lazy val notificationService: NotificationService =

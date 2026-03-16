@@ -10,6 +10,7 @@ object Dependencies {
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
   lazy val awsSns = "software.amazon.awssdk" % "sns" % awsVersion
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
+  lazy val awsUrlConnectionClient = "software.amazon.awssdk" % "url-connection-client" % awsVersion
   lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.192"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
