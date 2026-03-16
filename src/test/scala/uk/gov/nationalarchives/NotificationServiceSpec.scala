@@ -55,7 +55,7 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
       }
     }
 
-    "default consignmentType to Unknown when None" in {
+    "default transferring body to Unknown when None" in {
       val detailsNoBody = details.copy(transferringBody = None)
       val mockSnsUtils = Mockito.mock(classOf[SNSUtils])
       val mockResponse = PublishResponse.builder().messageId("msg-456").build()
