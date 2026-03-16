@@ -8,8 +8,8 @@ object Dependencies {
   private val doobieVersion = "1.0.0-RC11"
 
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
-  lazy val awsSns = "software.amazon.awssdk" % "sns" % awsVersion
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
+  lazy val snsUtils = "uk.gov.nationalarchives" %% "sns-utils" % "0.1.319"
   lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.192"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
