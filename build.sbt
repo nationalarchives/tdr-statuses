@@ -9,9 +9,8 @@ lazy val root = (project in file("."))
     name := "tdr-statuses",
     libraryDependencies ++= Seq(
       awsS3,
-      awsSns,
       awsSsm,
-      awsUrlConnectionClient,
+      snsUtils,
       backendCheckUtils,
       circeCore,
       circeParser,

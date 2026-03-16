@@ -7,13 +7,12 @@ import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
-import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient
-import software.amazon.awssdk.services.sns.SnsClient
+import uk.gov.nationalarchives.aws.utils.sns.SNSClients.sns
+import uk.gov.nationalarchives.aws.utils.sns.SNSUtils
 import uk.gov.nationalarchives.BackendCheckUtils._
 import uk.gov.nationalarchives.services.{FileCheckStatusEvaluator, GraphQlApiService, NotificationService}
 
 import java.io.{InputStream, OutputStream}
-import java.net.URI
 import scala.io.Source
 
 class Lambda(fileCheckStatusEvaluator: => FileCheckStatusEvaluator) {
@@ -66,13 +65,10 @@ class Lambda(fileCheckStatusEvaluator: => FileCheckStatusEvaluator) {
 object Lambda {
   private lazy val config = ConfigFactory.load()
 
-  private lazy val snsClient: SnsClient = SnsClient.builder()
-    .endpointOverride(URI.create(config.getString("sns.endpoint")))
-    .httpClient(UrlConnectionHttpClient.builder().build())
-    .build()
+  private lazy val snsUtils: SNSUtils = SNSUtils(sns(config.getString("sns.endpoint")))
 
   private lazy val notificationService: NotificationService =
-    NotificationService(snsClient, config.getString("sns.topicArn"), config.getString("environment"))
+    NotificationService(snsUtils, config.getString("sns.topicArn"), config.getString("environment"))
 
   private lazy val defaultEvaluator: FileCheckStatusEvaluator =
     FileCheckStatusEvaluator(GraphQlApiService.service, notificationService)

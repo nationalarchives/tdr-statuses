@@ -6,8 +6,8 @@ import io.circe.parser.decode
 import org.mockito.{ArgumentCaptor, ArgumentMatchers, Mockito}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
-import software.amazon.awssdk.services.sns.SnsClient
-import software.amazon.awssdk.services.sns.model.{PublishRequest, PublishResponse}
+import software.amazon.awssdk.services.sns.model.PublishResponse
+import uk.gov.nationalarchives.aws.utils.sns.SNSUtils
 import uk.gov.nationalarchives.services.{ConsignmentDetails, NotificationService}
 import uk.gov.nationalarchives.services.NotificationService.FileCheckFailureEvent
 
@@ -30,21 +30,20 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
 
   "sendFileCheckFailureNotification" should {
     "publish a correctly formatted message to SNS" in {
-      val mockSnsClient = Mockito.mock(classOf[SnsClient])
+      val mockSnsUtils = Mockito.mock(classOf[SNSUtils])
       val mockResponse = PublishResponse.builder().messageId("msg-123").build()
-      val captor = ArgumentCaptor.forClass(classOf[PublishRequest])
+      val messageCaptor = ArgumentCaptor.forClass(classOf[String])
+      val topicArnCaptor = ArgumentCaptor.forClass(classOf[String])
 
-      Mockito.when(mockSnsClient.publish(captor.capture())).thenReturn(mockResponse)
+      Mockito.when(mockSnsUtils.publish(messageCaptor.capture(), topicArnCaptor.capture())).thenReturn(mockResponse)
 
-      val service = NotificationService(mockSnsClient, topicArn, environment)
+      val service = NotificationService(mockSnsUtils, topicArn, environment)
       service.sendFileCheckFailureNotification(details).asserting { result =>
         result.messageId() shouldBe "msg-123"
 
-        val publishedRequest = captor.getValue
-        publishedRequest.topicArn() shouldBe topicArn
-        publishedRequest.subject() shouldBe "File Check Failure"
+        topicArnCaptor.getValue shouldBe topicArn
 
-        val event = decode[FileCheckFailureEvent](publishedRequest.message())
+        val event = decode[FileCheckFailureEvent](messageCaptor.getValue)
         event.isRight shouldBe true
         val parsed = event.toOption.get
         parsed.consignmentType shouldBe "standard"
@@ -56,13 +55,28 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
       }
     }
 
-    "propagate SNS client errors" in {
-      val mockSnsClient = Mockito.mock(classOf[SnsClient])
+    "default consignmentType to Unknown when None" in {
+      val detailsNoBody = details.copy(transferringBody = None)
+      val mockSnsUtils = Mockito.mock(classOf[SNSUtils])
+      val mockResponse = PublishResponse.builder().messageId("msg-456").build()
+      val messageCaptor = ArgumentCaptor.forClass(classOf[String])
 
-      Mockito.when(mockSnsClient.publish(ArgumentMatchers.any[PublishRequest]()))
+      Mockito.when(mockSnsUtils.publish(messageCaptor.capture(), ArgumentMatchers.any[String]())).thenReturn(mockResponse)
+
+      val service = NotificationService(mockSnsUtils, topicArn, environment)
+      service.sendFileCheckFailureNotification(detailsNoBody).asserting { result =>
+        val event = decode[FileCheckFailureEvent](messageCaptor.getValue)
+        event.toOption.get.transferringBodyName shouldBe "Unknown"
+      }
+    }
+
+    "propagate SNS client errors" in {
+      val mockSnsUtils = Mockito.mock(classOf[SNSUtils])
+
+      Mockito.when(mockSnsUtils.publish(ArgumentMatchers.any[String](), ArgumentMatchers.any[String]()))
         .thenThrow(new RuntimeException("SNS unavailable"))
 
-      val service = NotificationService(mockSnsClient, topicArn, environment)
+      val service = NotificationService(mockSnsUtils, topicArn, environment)
 
       service.sendFileCheckFailureNotification(details).attempt.asserting { result =>
         result.left.toOption.get shouldBe a[RuntimeException]
