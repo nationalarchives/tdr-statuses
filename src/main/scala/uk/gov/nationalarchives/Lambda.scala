@@ -15,7 +15,9 @@ import java.io.{InputStream, OutputStream}
 import java.net.URI
 import scala.io.Source
 
-class Lambda(fileCheckStatusEvaluator: => FileCheckStatusEvaluator = Lambda.defaultEvaluator) {
+class Lambda(fileCheckStatusEvaluator: => FileCheckStatusEvaluator) {
+
+  def this() = this(Lambda.defaultEvaluator)
 
   private val backendChecksUtils = BackendCheckUtils(sys.env("S3_ENDPOINT"))
 
