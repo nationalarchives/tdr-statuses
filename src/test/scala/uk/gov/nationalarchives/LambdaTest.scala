@@ -19,17 +19,21 @@ import scala.io.Source
 
 class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
+  val zeroByteChecksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  val bomFileChecksum = "f01a374e9c81e3db89b3a42940c4d6a5447684986a1296e42bf13f196eed6295"
+
   val ffidResults: TableFor4[String, List[String], String, String] = Table(
-    ("consignmentType", "puid", "fileSize", "result"),
-    ("judgment", List(s"$disallowedJudgmentPuid"), "1", "NonJudgmentFormat"),
-    ("judgment", List(s"$allowedJudgmentPuid"), "1", "Success"),
-    ("standard", List(s"$inactiveDisallowedStandardPuid"), "1", "Success"),
-    ("standard", List(s"$activeDisallowedStandardPuid"), "1", "Zip"),
-    ("standard", List(s"$allowedStandardPuid"), "0", "ZeroByteFile"),
-    ("standard", List(s"$allowedJudgmentPuid", s"$activeDisallowedStandardPuid"), "0", "ZeroByteFile"),
-    ("standard", List(s"$allowedJudgmentPuid", s"$inactiveDisallowedStandardPuid"), "0", "ZeroByteFile"),
-    ("standard", List(s"$activeDisallowedStandardPuid", s"$activeDisallowedStandardPuid"), "0", "ZeroByteFile"),
-    ("standard", List(s"$passwordProtectedPuid", s"$inactiveDisallowedStandardPuid"), "0", "ZeroByteFile")
+    ("consignmentType", "puid", "serverChecksum", "result"),
+    ("judgment", List(s"$disallowedJudgmentPuid"), "validChecksum", "NonJudgmentFormat"),
+    ("judgment", List(s"$allowedJudgmentPuid"), "validChecksum", "Success"),
+    ("standard", List(s"$inactiveDisallowedStandardPuid"), "validChecksum", "Success"),
+    ("standard", List(s"$activeDisallowedStandardPuid"), "validChecksum", "Zip"),
+    ("standard", List(s"$allowedStandardPuid"), zeroByteChecksum, "EmptyFile"),
+    ("standard", List(s"$allowedJudgmentPuid", s"$activeDisallowedStandardPuid"), zeroByteChecksum, "EmptyFile"),
+    ("standard", List(s"$allowedJudgmentPuid", s"$inactiveDisallowedStandardPuid"), zeroByteChecksum, "EmptyFile"),
+    ("standard", List(s"$activeDisallowedStandardPuid", s"$activeDisallowedStandardPuid"), zeroByteChecksum, "EmptyFile"),
+    ("standard", List(s"$passwordProtectedPuid", s"$inactiveDisallowedStandardPuid"), zeroByteChecksum, "EmptyFile"),
+    ("standard", List(s"$allowedStandardPuid"), bomFileChecksum, "EmptyFile")
   )
   val avResults: TableFor2[String, String] = Table(
     ("avResult", "expectedStatus"),
@@ -61,15 +65,16 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     ("mismatch", "match", "Mismatch")
   )
 
-  forAll(ffidResults)((consignmentType, puids, fileSize, expectedStatus) => {
-    "run" should s"return a $expectedStatus if the $consignmentType puid is ${puids.mkString(",")} and file size is $fileSize" in {
-      
+  forAll(ffidResults)((consignmentType, puids, serverChecksum, expectedStatus) => {
+    "run" should s"return a $expectedStatus if the $consignmentType puid is ${puids.mkString(",")} and server checksum is $serverChecksum" in {
+
       val consignmentId = UUID.randomUUID()
       val matches = puids.map(puid => {
         FFIDMetadataInputMatches(Option("extension"), "identificationBasis", Option(puid), Some(false), Some("format-name"))
       })
-      val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
-      val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), consignmentType, fileSize, "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks) :: Nil
+      val checksumResults = List(ChecksumResult(serverChecksum, UUID.randomUUID()))
+      val fileChecks = FileCheckResults(Nil, checksumResults, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+      val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), consignmentType, "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks) :: Nil
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
@@ -199,13 +204,13 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     }
   })
   val fileClientChecksResults: TableFor5[String, String, String, String, String] = Table(
-    ("clientChecksum", "clientFilePath", "ffid", "fileSize", "expectedStatus"),
-    ("", "path", s"$allowedJudgmentPuid", "1", "CompletedWithIssues"),
-    ("checksum", "", s"$allowedJudgmentPuid", "1", "CompletedWithIssues"),
-    ("", "", s"$activeDisallowedStandardPuid", "1", "CompletedWithIssues"),
-    ("checksum", "path", s"$activeDisallowedStandardPuid", "1", "Completed"),
-    ("checksum", "path", "", "0", "CompletedWithIssues"),
-    ("checksum", "path", s"$allowedJudgmentPuid", "1", "Completed")
+    ("clientChecksum", "clientFilePath", "ffid", "serverChecksum", "expectedStatus"),
+    ("", "path", s"$allowedJudgmentPuid", "validChecksum", "CompletedWithIssues"),
+    ("checksum", "", s"$allowedJudgmentPuid", "validChecksum", "CompletedWithIssues"),
+    ("", "", s"$activeDisallowedStandardPuid", "validChecksum", "CompletedWithIssues"),
+    ("checksum", "path", s"$activeDisallowedStandardPuid", "validChecksum", "Completed"),
+    ("checksum", "path", "", zeroByteChecksum, "CompletedWithIssues"),
+    ("checksum", "path", s"$allowedJudgmentPuid", "validChecksum", "Completed")
   )
   val consignmentClientChecksResults: TableFor2[List[String], String] = Table(
     ("fileClientChecks", "expectedResult"),
@@ -243,14 +248,14 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     (0, 0, None),
   )
 
-  forAll(fileClientChecksResults)((clientChecksum, clientFilePath, ffid, fileSize, expectedStatus) => {
+  forAll(fileClientChecksResults)((clientChecksum, clientFilePath, ffid, serverChecksum, expectedStatus) => {
     "run" should s"return $expectedStatus for $clientChecksum, $clientFilePath, $ffid" in {
       val inputReplacements = Map(
         "ClientChecksum" -> clientChecksum,
         "ClientFilePath" -> clientFilePath,
         "FFID" -> ffid,
         "ConsignmentType" -> "standard",
-        "FileSize" -> fileSize
+        "ServerChecksum" -> serverChecksum
       )
       val status = getStatus(inputReplacements, "ClientChecks", "Consignment")
       status should equal(expectedStatus)
@@ -267,7 +272,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val consignmentId = UUID.randomUUID()
       val files: List[File] = fileClientChecks map {
         case "Completed" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), FileCheckResults(Nil, Nil, Nil))
-        case "CompletedWithIssues" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "0", "", "originalPath", Some("source-bucket"), Some("object/key"), FileCheckResults(Nil, Nil, Nil))
+        case "CompletedWithIssues" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "", "originalPath", Some("source-bucket"), Some("object/key"), FileCheckResults(Nil, Nil, Nil))
       }
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
