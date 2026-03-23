@@ -74,9 +74,10 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val matches = puids.map(puid => {
         FFIDMetadataInputMatches(Option("extension"), "identificationBasis", Option(puid), Some(false), Some("format-name"))
       })
+      val fileId = UUID.randomUUID()
       val checksumResults = List(ChecksumResult(serverChecksum, UUID.randomUUID()))
-      val fileChecks = FileCheckResults(Nil, checksumResults, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
-      val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), consignmentType, fileSize, "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks) :: Nil
+      val fileChecks = FileCheckResults(Nil, checksumResults, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+      val files = File(consignmentId, fileId, UUID.randomUUID(), consignmentType, fileSize, "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks) :: Nil
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
@@ -160,9 +161,10 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       
       val consignmentId = UUID.randomUUID()
       val files = puids.map(puid => {
+        val fileId = UUID.randomUUID()
         val matches = FFIDMetadataInputMatches(Option("extension"),"identificationBasis" ,Option(puid), Some(false), Some("format-name")) :: Nil
-        val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
-        File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks)
+        val fileChecks = FileCheckResults(Nil, Nil, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+        File(consignmentId, fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks)
       })
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
@@ -296,9 +298,10 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
   forAll(missingInfo)((missingInfoCount, providedInfoCount, expectedConsignmentStatus) => {
     val antivirus = Antivirus(UUID.randomUUID(), "software", "softwareVersion", "databaseVersion", "", 1) :: Nil
-    val ffid = FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", Nil) :: Nil
+    val fileId = UUID.randomUUID()
+    val ffid = FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", Nil) :: Nil
     val checksum = ChecksumResult("checksum", UUID.randomUUID()) :: Nil
-    val createFile = File(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), _)
+    val createFile = File(UUID.randomUUID(), fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), _)
     val providedInfoFiles = List.fill(providedInfoCount)("")
       .map(_ => createFile(FileCheckResults(antivirus, checksum, ffid)))
 
@@ -370,11 +373,12 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     val consignmentId = UUID.randomUUID()
     val userId: UUID = UUID.randomUUID()
     val matches = FFIDMetadataInputMatches(Option("extension"), "identificationBasis", Option(allowedJudgmentPuid), Some(false), Some("format-name")) :: Nil
-    val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val fileId = UUID.randomUUID()
+    val fileChecks = FileCheckResults(Nil, Nil, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
 
     val file = uk.gov.nationalarchives.BackendCheckUtils.File(
       consignmentId,
-      UUID.randomUUID(),
+      fileId,
       userId,
       "standard",
       "FileSize",
