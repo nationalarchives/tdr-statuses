@@ -65,7 +65,8 @@ The lambda processes the following file statuses for each file.
 
 ### FFID
 * If the consignment type is judgment and the puid is not in the AllowedPuids table then `NonJudgmentFormat`.
-* If the server checksum matches the zero byte file checksum (`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`) or the UTF-8 BOM file checksum (`f01a374e9c81e3db89b3a42940c4d6a5447684986a1296e42bf13f196eed6295`) then `EmptyFile`.
+* If the server checksum matches the zero byte file checksum (`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`) or the UTF-8 BOM file checksum (`f01a374e9c81e3db89b3a42940c4d6a5447684986a1296e42bf13f196eed6295`) then `ZeroByteFile`.
+* If the file size is `0` then `ZeroByteFile`.
 * If the consignment type is standard and the puid is in the DisallowedPuids table and is active then get the status from the `Reason` column.
 * Otherwise `Success`.
 

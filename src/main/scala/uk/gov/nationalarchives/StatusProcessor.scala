@@ -17,7 +17,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
   private val Failed = "Failed"
   private val ServerChecksum = "ServerChecksum"
   private val ServerAntivirus = "ServerAntivirus"
-  private val EmptyFile = "EmptyFile"
+  private val ZeroByteFile = "ZeroByteFile"
   private val ZeroByteChecksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   private val BomFileChecksum = "f01a374e9c81e3db89b3a42940c4d6a5447684986a1296e42bf13f196eed6295"
   private val ClientChecksum = "ClientChecksum"
@@ -58,7 +58,8 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
 
       val reason = result match {
         case r if r.consignmentType == "judgment" && judgmentDisAllowedPuid => NonJudgmentFormat
-        case _ if isEmptyFile => EmptyFile
+        case _ if isEmptyFile => ZeroByteFile
+        case r if r.fileSize == "0" => ZeroByteFile
         case _ if fileFormat.isEmpty => Failed
         case _ => disallowedReason.getOrElse(Success)
       }
@@ -158,7 +159,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
       val allStatuses = ffid ++ clientChecksum ++ clientFilePath ++ redactions
       val failedIds = allStatuses.filter(s => {
         if(s.statusName == FFIDStatus) {
-          s.statusValue == EmptyFile
+          s.statusValue == ZeroByteFile
         } else {
           s.statusValue != Success
         }
