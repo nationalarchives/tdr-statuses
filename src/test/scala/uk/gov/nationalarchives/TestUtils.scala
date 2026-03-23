@@ -11,6 +11,7 @@ import org.mockito.MockitoSugar
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.prop.TableDrivenPropertyChecks
 import uk.gov.nationalarchives.BackendCheckUtils._
+import uk.gov.nationalarchives.services.FileCheckStatusEvaluator
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import scala.io.Source
@@ -54,7 +55,7 @@ class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoS
     val s3Input = putJsonFile(S3Input("testKey", "testBucket"), input).asJson.printWith(noSpaces)
     val in = new ByteArrayInputStream(s3Input.getBytes())
     val out = new ByteArrayOutputStream()
-    new Lambda().run(in, out)
+    new Lambda(FileCheckStatusEvaluator.noOp).run(in, out)
     getInputFromS3().statuses.statuses
   }
 

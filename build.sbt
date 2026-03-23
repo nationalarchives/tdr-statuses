@@ -9,15 +9,22 @@ lazy val root = (project in file("."))
     name := "tdr-statuses",
     libraryDependencies ++= Seq(
       awsS3,
+      awsSsm,
+      snsUtils,
       backendCheckUtils,
       circeCore,
       circeParser,
       circeGeneric,
       metadataSchema,
       catsEffect,
+      graphqlClient,
+      generatedGraphql,
+      authUtils,
+      typesafeConfig,
       mockito % Test,
       scalaTest % Test,
-      wiremock % Test
+      wiremock % Test,
+      catsEffectTesting % Test
     ),
     assembly / assemblyJarName := "statuses.jar"
   )
