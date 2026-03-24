@@ -18,8 +18,6 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
   private val ServerChecksum = "ServerChecksum"
   private val ServerAntivirus = "ServerAntivirus"
   private val ZeroByteFile = "ZeroByteFile"
-  private val ZeroByteChecksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-  private val BomFileChecksum = "f01a374e9c81e3db89b3a42940c4d6a5447684986a1296e42bf13f196eed6295"
   private val ClientChecksum = "ClientChecksum"
   private val ClientFilePath = "ClientFilePath"
   private val FFIDStatus = "FFID"
@@ -53,8 +51,13 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
         .find(r => puidMatches.contains(r.puid)).map(_.reason)
       val judgmentDisAllowedPuid = !puidMatches.forall(p => allPuidInformation.allowedPuids.map(_.puid).contains(p))
 
+      val emptyFileChecksums: Set[String] = allPuidInformation.puidChecksums
+        .filter(_.puid == "zeroByteFile")
+        .flatMap(_.checksums.map(_.checksum))
+        .toSet
+
       val serverChecksum = result.fileCheckResults.checksum.map(_.sha256Checksum).headOption
-      val isEmptyFile = serverChecksum.contains(ZeroByteChecksum) || serverChecksum.contains(BomFileChecksum)
+      val isEmptyFile = serverChecksum.exists(emptyFileChecksums.contains)
 
       val reason = result match {
         case r if r.consignmentType == "judgment" && judgmentDisAllowedPuid => NonJudgmentFormat
