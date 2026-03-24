@@ -207,22 +207,6 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       serverAVStatuses.head.statusValue should equal(expectedResult)
     }
   })
-  val fileClientChecksResults: TableFor5[String, String, String, String, String] = Table(
-    ("clientChecksum", "clientFilePath", "ffid", "serverChecksum", "expectedStatus"),
-    ("", "path", s"$allowedJudgmentPuid", "validChecksum", "CompletedWithIssues"),
-    ("checksum", "", s"$allowedJudgmentPuid", "validChecksum", "CompletedWithIssues"),
-    ("", "", s"$activeDisallowedStandardPuid", "validChecksum", "CompletedWithIssues"),
-    ("checksum", "path", s"$activeDisallowedStandardPuid", "validChecksum", "Completed"),
-    ("checksum", "path", "", zeroByteChecksum, "CompletedWithIssues"),
-    ("checksum", "path", s"$allowedJudgmentPuid", "validChecksum", "Completed")
-  )
-  val consignmentClientChecksResults: TableFor2[List[String], String] = Table(
-    ("fileClientChecks", "expectedResult"),
-    (List("Completed", "CompletedWithIssues"), "CompletedWithIssues"),
-    (List("CompletedWithIssues", "CompletedWithIssues"), "CompletedWithIssues"),
-    (List("Completed", "Completed"), "Completed"),
-    (List("Completed"), "Completed"),
-  )
 
   forAll(redactionResults)((description, redactedResults, expectedResult) => {
     "run" should s"return the expected consignment status $expectedResult for $description" in {
@@ -251,7 +235,15 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     (0, 1, Option("Completed")),
     (0, 0, None),
   )
-
+  val fileClientChecksResults: TableFor5[String, String, String, String, String] = Table(
+    ("clientChecksum", "clientFilePath", "ffid", "serverChecksum", "expectedStatus"),
+    ("", "path", s"$allowedJudgmentPuid", "validChecksum", "CompletedWithIssues"),
+    ("checksum", "", s"$allowedJudgmentPuid", "validChecksum", "CompletedWithIssues"),
+    ("", "", s"$activeDisallowedStandardPuid", "validChecksum", "CompletedWithIssues"),
+    ("checksum", "path", s"$activeDisallowedStandardPuid", "validChecksum", "Completed"),
+    ("checksum", "path", "", zeroByteChecksum, "CompletedWithIssues"),
+    ("checksum", "path", s"$allowedJudgmentPuid", "validChecksum", "Completed")
+  )
   forAll(fileClientChecksResults)((clientChecksum, clientFilePath, ffid, serverChecksum, expectedStatus) => {
     "run" should s"return $expectedStatus for $clientChecksum, $clientFilePath, $ffid" in {
       val inputReplacements = Map(
@@ -271,6 +263,13 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     wiremockS3Server.start()
   }
 
+  val consignmentClientChecksResults: TableFor2[List[String], String] = Table(
+    ("fileClientChecks", "expectedResult"),
+    (List("Completed", "CompletedWithIssues"), "CompletedWithIssues"),
+    (List("CompletedWithIssues", "CompletedWithIssues"), "CompletedWithIssues"),
+    (List("Completed", "Completed"), "Completed"),
+    (List("Completed"), "Completed"),
+  )
   forAll(consignmentClientChecksResults)((fileClientChecks, expectedResult) => {
     "run" should s"return the expected consignment status $expectedResult for client checks ${fileClientChecks.mkString(" ")}" in {
       val consignmentId = UUID.randomUUID()
