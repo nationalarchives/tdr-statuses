@@ -33,6 +33,8 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     ("standard", List(s"$allowedJudgmentPuid", s"$inactiveDisallowedStandardPuid"), zeroByteChecksum, "1", "ZeroByteFile"),
     ("standard", List(s"$activeDisallowedStandardPuid", s"$activeDisallowedStandardPuid"), zeroByteChecksum, "1", "ZeroByteFile"),
     ("standard", List(s"$passwordProtectedPuid", s"$inactiveDisallowedStandardPuid"), zeroByteChecksum, "1", "ZeroByteFile"),
+    ("standard", List(s"$activeDisallowedStandardPuid", s"$inactiveDisallowedStandardPuid"), "validChecksum", "1", "MultipleFormats"),
+    ("judgment", List(s"$allowedJudgmentPuid", s"$allowedStandardPuid"), "validChecksum", "1", "MultipleFormats"),
     ("standard", List(s"$allowedStandardPuid"), bomFileChecksum, "1", "ZeroByteFile"),
     ("standard", List(s"$allowedStandardPuid"), "validChecksum", "0", "ZeroByteFile"),
     ("standard", List(s"$activeDisallowedStandardPuid"), "validChecksum", "0", "ZeroByteFile")
@@ -179,6 +181,37 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       serverFFIDStatuses.head.statusValue should equal(expectedResult)
     }
   })
+
+  "run" should "return CompletedWithIssues for ServerFFID when a single file has multiple PUIDs" in {
+    val consignmentId = UUID.randomUUID()
+    val matches = List(
+      FFIDMetadataInputMatches(Option("ext"), "identificationBasis", Option(allowedJudgmentPuid), Some(false), Some("format-name")),
+      FFIDMetadataInputMatches(Option("ext"), "identificationBasis", Option(allowedStandardPuid), Some(false), Some("format-name"))
+    )
+    val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks) :: Nil
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+    new Lambda(FileCheckStatusEvaluator.noOp).run(new ByteArrayInputStream(s3Input.getBytes()), new ByteArrayOutputStream())
+    val serverFFIDStatuses = getInputFromS3().statuses.statuses.filter(_.statusName == "ServerFFID")
+    serverFFIDStatuses.head.statusValue should equal("CompletedWithIssues")
+  }
+
+  "run" should "return MultipleFormats for FFID and CompletedWithIssues for ClientChecks when a file has multiple PUIDs" in {
+    val consignmentId = UUID.randomUUID()
+    val matches = List(
+      FFIDMetadataInputMatches(Option("ext"), "identificationBasis", Option(allowedJudgmentPuid), Some(false), Some("format-name")),
+      FFIDMetadataInputMatches(Option("ext"), "identificationBasis", Option(allowedStandardPuid), Some(false), Some("format-name"))
+    )
+    val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks) :: Nil
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+    new Lambda(FileCheckStatusEvaluator.noOp).run(new ByteArrayInputStream(s3Input.getBytes()), new ByteArrayOutputStream())
+    val statuses = getInputFromS3().statuses.statuses
+    statuses.find(_.statusName == "FFID").get.statusValue should equal("MultipleFormats")
+    statuses.filter(s => s.statusName == "ClientChecks" && s.statusType == "Consignment").head.statusValue should equal("CompletedWithIssues")
+  }
   val redactionResults: TableFor3[String, RedactedResults, String] = Table(
     ("description", "redactedResults", "expectedResult"),
     ("no redactions", RedactedResults(Nil, Nil), "Completed"),

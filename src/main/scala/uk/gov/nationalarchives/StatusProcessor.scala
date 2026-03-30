@@ -18,6 +18,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
   private val ServerChecksum = "ServerChecksum"
   private val ServerAntivirus = "ServerAntivirus"
   private val ZeroByteFile = "ZeroByteFile"
+  private val MultiplePuids = "MultipleFormats"
   private val ClientChecksum = "ClientChecksum"
   private val ClientFilePath = "ClientFilePath"
   private val FFIDStatus = "FFID"
@@ -64,6 +65,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
         case _ if isEmptyFile => ZeroByteFile
         case r if r.fileSize == "0" => ZeroByteFile
         case _ if fileFormat.isEmpty => Failed
+        case _ if puidMatches.count(_.nonEmpty) > 1 => MultiplePuids
         case _ => disallowedReason.getOrElse(Success)
       }
 
@@ -128,7 +130,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
       fileFFID <- ffid()
     } yield {
       val activeDisallowedReasons = allPuidInformation.disallowedPuids.filter(_.active).map(_.reason)
-      val hasErrors = fileFFID.map(_.statusValue).exists(activeDisallowedReasons.contains)
+      val hasErrors = fileFFID.map(_.statusValue).exists(v => activeDisallowedReasons.contains(v) || v == MultiplePuids)
       val isFailed = fileFFID.exists(_.statusValue == Failed)
       input.results.headOption.map(i => {
         val statusValue = if(isFailed) {
@@ -162,7 +164,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
       val allStatuses = ffid ++ clientChecksum ++ clientFilePath ++ redactions
       val failedIds = allStatuses.filter(s => {
         if(s.statusName == FFIDStatus) {
-          s.statusValue == ZeroByteFile
+          s.statusValue == ZeroByteFile || s.statusValue == MultiplePuids
         } else {
           s.statusValue != Success
         }
