@@ -52,8 +52,17 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
         .find(r => puidMatches.contains(r.puid)).map(_.reason)
       val judgmentDisAllowedPuid = !puidMatches.forall(p => allPuidInformation.allowedPuids.map(_.puid).contains(p))
 
+      val emptyFileChecksums: Set[String] = allPuidInformation.puidChecksums
+        .filter(_.puid == "zeroByteFile")
+        .flatMap(_.checksums.map(_.checksum))
+        .toSet
+
+      val serverChecksum = result.fileCheckResults.checksum.map(_.sha256Checksum).headOption
+      val isEmptyFile = serverChecksum.exists(emptyFileChecksums.contains)
+
       val reason = result match {
         case r if r.consignmentType == "judgment" && judgmentDisAllowedPuid => NonJudgmentFormat
+        case _ if isEmptyFile => ZeroByteFile
         case r if r.fileSize == "0" => ZeroByteFile
         case _ if fileFormat.isEmpty => Failed
         case _ if puidMatches.count(_.nonEmpty) > 1 => MultiplePuids
