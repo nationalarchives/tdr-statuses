@@ -10,7 +10,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
-    uses: nationalarchives/tdr-github-actions/.github/workflows/lambda_build.yml@683912c0ebb8d5d6edd15a222677395e95d12ce0 # v0.0.24
+    uses: nationalarchives/tdr-github-actions/.github/workflows/lambda_build.yml@9214d929d74b527c75cdac14ba96812f90b3ebba # v0.0.35
     with:
       lambda-name: statuses
       repo-name: tdr-statuses
