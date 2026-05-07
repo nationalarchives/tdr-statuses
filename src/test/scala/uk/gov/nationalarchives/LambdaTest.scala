@@ -42,6 +42,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
   val avResults: TableFor2[String, String] = Table(
     ("avResult", "expectedStatus"),
     ("virusFound", "VirusDetected"),
+    ("NO_THREATS_FOUND", Success),
     ("", Success)
   )
 
@@ -128,6 +129,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     (List("anotherVirus"), "CompletedWithIssues"),
     (List("virus", "virus"), "CompletedWithIssues"),
     (List("", ""), "Completed"),
+    (List("NO_THREATS_FOUND", ""), "Completed"),
   )
 
   forAll(emptyCheckResults)((statusName, value, expectedStatus) => {
