@@ -35,7 +35,7 @@ class StatusProcessor[F[_] : Monad](input: Input, allPuidInformation: AllPuidInf
         Failed
       } else {
         fileCheckResults.antivirus.head.result match {
-          case "" => Success
+          case "" | "NO_THREATS_FOUND" => Success
           case _ => VirusDetected
         }
       }
