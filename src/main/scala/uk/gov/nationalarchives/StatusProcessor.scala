@@ -13,14 +13,14 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
 
   private implicit val logger: Logger[IO] = Slf4jLogger.getLogger[IO]
 
-  private def fetchFileBytes(file: File): IO[Option[Array[Byte]]] = {
-    def readFromS3(bucket: String, key: String): IO[Option[Array[Byte]]] =
+  private def validateFileContent(file: File): IO[Option[Boolean]] = {
+    def readFromS3(bucket: String, key: String): IO[Option[Boolean]] =
       Resource
         .fromAutoCloseable(IO(s3Utils.getObjectAsStream(bucket, key)))
-        .use(is => IO(is.readAllBytes()))
+        .use(is => IO(FileContentValidator.isAllowedContent(is)))
         .map(Some(_))
         .handleErrorWith { err =>
-          Logger[IO].error(s"Failed to fetch file from s3://$bucket/$key for fileId=${file.fileId}: ${err.getMessage}").as(None)
+          Logger[IO].error(s"Failed to validate file from s3://$bucket/$key for fileId=${file.fileId}: ${err.getMessage}").as(None)
         }
 
     (file.s3CleanDestinationBucket, file.s3CleanDestinationBucketKey) match {
@@ -104,17 +104,17 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
         case _ if puidMatches.count(_.nonEmpty) > 1 =>
           Status(result.fileId, FileType, FFIDStatus, MultiplePuids).pure[IO]
         case _ if isUnidentified =>
-          fetchFileBytes(result).map {
-            case Some(bytes) if FileContentValidator.isAllowedContent(bytes) =>
+          validateFileContent(result).map {
+            case Some(true) =>
               Status(result.fileId, FileType, FFIDStatus, Success)
             case _ =>
               Status(result.fileId, FileType, FFIDStatus, Unidentified)
           }
         case _ if extensionOnlyTextFile =>
-          fetchFileBytes(result).map {
-            case Some(bytes) if FileContentValidator.isAllowedContent(bytes) =>
+          validateFileContent(result).map {
+            case Some(true) =>
               Status(result.fileId, FileType, FFIDStatus, disallowedReason.getOrElse(Success))
-            case Some(_) =>
+            case Some(false) =>
               Status(result.fileId, FileType, FFIDStatus, Unidentified)
             case None =>
               Status(result.fileId, FileType, FFIDStatus, disallowedReason.getOrElse(Success))
