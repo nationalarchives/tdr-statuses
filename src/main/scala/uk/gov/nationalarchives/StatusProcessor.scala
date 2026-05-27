@@ -16,8 +16,8 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
   private def validateFileContent(file: File): IO[Option[Boolean]] = {
     def readFromS3(bucket: String, key: String): IO[Option[Boolean]] =
       Resource
-        .fromAutoCloseable(IO(s3Utils.getObjectAsStream(bucket, key)))
-        .use(is => IO(FileContentValidator.isAllowedContent(is)))
+        .fromAutoCloseable(IO.blocking(s3Utils.getObjectAsStream(bucket, key)))
+        .use(is => IO.blocking(FileContentValidator.isAllowedContent(is)))
         .map(Some(_))
         .handleErrorWith { err =>
           Logger[IO].error(s"Failed to validate file from s3://$bucket/$key for fileId=${file.fileId}: ${err.getMessage}").as(None)
@@ -87,10 +87,10 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
 
       val isUnidentified = puidMatches.nonEmpty && puidMatches.forall(_.isEmpty) && fileFormat.nonEmpty
 
-      val extensionOnlyTextFile = fileFormat.flatMap(_.matches).exists { m =>
-        m.identificationBasis.toLowerCase.contains("extension") &&
-          m.extension.exists(ext => ext.equalsIgnoreCase("txt") || ext.equalsIgnoreCase("csv"))
-      }
+      val allMatches = fileFormat.flatMap(_.matches)
+      val extensionOnlyTextFile = allMatches.nonEmpty &&
+        allMatches.forall(m => m.identificationBasis.toLowerCase.contains("extension")) &&
+        allMatches.exists(m => m.extension.exists(ext => ext.equalsIgnoreCase("txt") || ext.equalsIgnoreCase("csv")))
 
       result match {
         case r if r.consignmentType == "judgment" && judgmentDisAllowedPuid =>

@@ -614,4 +614,29 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     val ffidStatus = result.statuses.find(_.statusName == "FFID").get
     ffidStatus.statusValue should equal("Success")
   }
+
+  "run" should "return Success without content validation for a txt file identified by binary signature" in {
+    val consignmentId = UUID.randomUUID()
+    val fileId = UUID.randomUUID()
+    val cleanBucket = "clean-bucket"
+    val cleanKey = "object/txt-sig-only"
+    // Single match with BinarySignature basis — not extension-only, so content validation must not fire.
+    val matches = List(
+      FFIDMetadataInputMatches(Option("txt"), "BinarySignature", Option(allowedStandardPuid), Some(false), Some("format-name"))
+    )
+    val checksumResults = List(ChecksumResult("validChecksum", UUID.randomUUID()))
+    val fileChecks = FileCheckResults(Nil, checksumResults, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val files = File(consignmentId, fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", None, None, None, None, Some(cleanBucket), Some(cleanKey), fileChecks) :: Nil
+
+    // No S3 stub — if content validation fires it will error; test would fail.
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+    val input = new ByteArrayInputStream(s3Input.getBytes())
+    val output = new ByteArrayOutputStream()
+    new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
+
+    val result = getInputFromS3().statuses
+    val ffidStatus = result.statuses.find(_.statusName == "FFID").get
+    ffidStatus.statusValue should equal("Success")
+  }
 }
