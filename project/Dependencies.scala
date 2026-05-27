@@ -4,13 +4,14 @@ object Dependencies {
   private val circeVersion = "0.14.15"
 
   private val testContainersVersion = "0.44.1"
-  private val awsVersion = "2.44.3"
+  private val awsVersion = "2.44.12"
   private val doobieVersion = "1.0.0-RC11"
 
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
-  lazy val snsUtils = "uk.gov.nationalarchives" %% "sns-utils" % "0.1.328"
-  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.204"
+  lazy val snsUtils = "uk.gov.nationalarchives" %% "sns-utils" % "0.1.330"
+  lazy val s3Utils = "uk.gov.nationalarchives" %% "s3-utils" % "0.1.330"
+  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.213"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
   lazy val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
@@ -21,9 +22,10 @@ object Dependencies {
   lazy val wiremock = "com.github.tomakehurst" % "wiremock" % "3.0.1"
   lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.131"
   lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.7.0"
-  lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.297"
-  lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.472"
-  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.285"
+  lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.302"
+  lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.475"
+  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.288"
   lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.8"
+  lazy val utf8Validator = "uk.gov.nationalarchives" % "utf8-validator" % "1.2"
   lazy val catsEffectTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.8.0"
 }

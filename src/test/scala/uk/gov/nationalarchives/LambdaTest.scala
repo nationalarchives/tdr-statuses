@@ -1,6 +1,7 @@
 package uk.gov.nationalarchives
 
 import cats.effect.IO
+import com.github.tomakehurst.wiremock.client.WireMock._
 import io.circe.Printer
 import io.circe.Printer.noSpaces
 import io.circe.generic.auto._
@@ -80,7 +81,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val fileId = UUID.randomUUID()
       val checksumResults = List(ChecksumResult(serverChecksum, UUID.randomUUID()))
       val fileChecks = FileCheckResults(Nil, checksumResults, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
-      val files = File(consignmentId, fileId, UUID.randomUUID(), consignmentType, fileSize, "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks) :: Nil
+      val files = File(consignmentId, fileId, UUID.randomUUID(), consignmentType, fileSize, "checksum", "originalPath", Some("source-bucket"), Some("object/key"), None, None, None, None, fileChecks) :: Nil
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
       val input = new ByteArrayInputStream(s3Input.getBytes())
@@ -168,7 +169,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
         val fileId = UUID.randomUUID()
         val matches = FFIDMetadataInputMatches(Option("extension"),"identificationBasis" ,Option(puid), Some(false), Some("format-name")) :: Nil
         val fileChecks = FileCheckResults(Nil, Nil, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
-        File(consignmentId, fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks)
+        File(consignmentId, fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), None, None, None, None, fileChecks)
       })
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
@@ -191,7 +192,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       FFIDMetadataInputMatches(Option("ext"), "identificationBasis", Option(allowedStandardPuid), Some(false), Some("format-name"))
     )
     val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
-    val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks) :: Nil
+    val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), None, None, None, None, fileChecks) :: Nil
     val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
     val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
     new Lambda(FileCheckStatusEvaluator.noOp).run(new ByteArrayInputStream(s3Input.getBytes()), new ByteArrayOutputStream())
@@ -206,7 +207,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       FFIDMetadataInputMatches(Option("ext"), "identificationBasis", Option(allowedStandardPuid), Some(false), Some("format-name"))
     )
     val fileChecks = FileCheckResults(Nil, Nil, FFID(UUID.randomUUID(), "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
-    val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks) :: Nil
+    val files = File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), None, None, None, None, fileChecks) :: Nil
     val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
     val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
     new Lambda(FileCheckStatusEvaluator.noOp).run(new ByteArrayInputStream(s3Input.getBytes()), new ByteArrayOutputStream())
@@ -227,7 +228,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       val files = avResults.map(avResult => {
         val antivirus: Antivirus = Antivirus(UUID.randomUUID(), "software", "softwareVersion", "databaseVersion", avResult, 1)
         val fileChecks = FileCheckResults(List(antivirus), Nil, Nil)
-        File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), fileChecks)
+        File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), None, None, None, None, fileChecks)
       })
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
@@ -248,7 +249,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       
       val consignmentId = UUID.randomUUID()
       val files = List(File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum",
-        "originalPath", Some("source-bucket"), Some("object/key"), FileCheckResults(Nil, Nil, Nil)))
+        "originalPath", Some("source-bucket"), Some("object/key"), None, None, None, None, FileCheckResults(Nil, Nil, Nil)))
 
       val inputString = Input(files, redactedResults, StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
@@ -309,8 +310,8 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     "run" should s"return the expected consignment status $expectedResult for client checks ${fileClientChecks.mkString(" ")}" in {
       val consignmentId = UUID.randomUUID()
       val files: List[File] = fileClientChecks map {
-        case "Completed" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), FileCheckResults(Nil, Nil, Nil))
-        case "CompletedWithIssues" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "", "originalPath", Some("source-bucket"), Some("object/key"), FileCheckResults(Nil, Nil, Nil))
+        case "Completed" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), None, None, None, None, FileCheckResults(Nil, Nil, Nil))
+        case "CompletedWithIssues" => File(consignmentId, UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "", "originalPath", Some("source-bucket"), Some("object/key"), None, None, None, None, FileCheckResults(Nil, Nil, Nil))
       }
       val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
       val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
@@ -335,7 +336,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     val fileId = UUID.randomUUID()
     val ffid = FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", Nil) :: Nil
     val checksum = ChecksumResult("checksum", UUID.randomUUID()) :: Nil
-    val createFile = File(UUID.randomUUID(), fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), _)
+    val createFile = File(UUID.randomUUID(), fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some("source-bucket"), Some("object/key"), None, None, None, None, _)
     val providedInfoFiles = List.fill(providedInfoCount)("")
       .map(_ => createFile(FileCheckResults(antivirus, checksum, ffid)))
 
@@ -388,7 +389,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
   "backend checks statuses" should "return Failed if the input  is empty" in {
     val fileCheckResults = FileCheckResults(Nil, Nil, Nil)
-    val files = File(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "path", Some("source-bucket"), Some("object/key"), fileCheckResults) :: Nil
+    val files = File(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "standard", "1", "checksum", "path", Some("source-bucket"), Some("object/key"), None, None, None, None, fileCheckResults) :: Nil
 
     val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
     val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(Printer.noSpaces)
@@ -420,6 +421,10 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       "originalPath": String,
       Some("3SourceBucket"): Option[String],
       Some("s3SourceBucketKey"),
+      None,
+      None,
+      None,
+      None,
       fileChecks
     )
 
@@ -441,5 +446,172 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
       argThat[File]((res: File) => res == file),
       argThat[List[Status]]((statuses: List[Status]) => statuses.nonEmpty)
     )
+  }
+
+  // --- FileContentValidator integration tests ---
+
+  "run" should "return Success for an unidentified file (empty puid) when file content is valid UTF-8" in {
+    val consignmentId = UUID.randomUUID()
+    val fileId = UUID.randomUUID()
+    val sourceBucket = "source-bucket"
+    val sourceKey = "object/key-valid-utf8"
+    // Empty puid triggers the isUnidentified branch
+    val matches = FFIDMetadataInputMatches(Option("txt"), "Extension", Option(""), Some(false), Some("format-name")) :: Nil
+    val checksumResults = List(ChecksumResult("validChecksum", UUID.randomUUID()))
+    val fileChecks = FileCheckResults(Nil, checksumResults, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val files = File(consignmentId, fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some(sourceBucket), Some(sourceKey), None, None, None, None, fileChecks) :: Nil
+
+    // Stub S3 to return valid UTF-8 content for fetchFileBytes
+    wiremockS3Server.stubFor(get(urlPathMatching(s".*$sourceKey.*")).willReturn(ok("Hello valid content")))
+
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+    val input = new ByteArrayInputStream(s3Input.getBytes())
+    val output = new ByteArrayOutputStream()
+    new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
+
+    val result = getInputFromS3().statuses
+    val ffidStatus = result.statuses.find(_.statusName == "FFID").get
+    ffidStatus.statusValue should equal("Success")
+  }
+
+  "run" should "return Unidentified for an unidentified file (empty puid) when file content is not valid" in {
+    val consignmentId = UUID.randomUUID()
+    val fileId = UUID.randomUUID()
+    val sourceBucket = "source-bucket"
+    val sourceKey = "object/invalid-key"
+    // Empty puid triggers the isUnidentified branch
+    val matches = FFIDMetadataInputMatches(Option("bin"), "Extension", Option(""), Some(false), Some("format-name")) :: Nil
+    val checksumResults = List(ChecksumResult("validChecksum", UUID.randomUUID()))
+    val fileChecks = FileCheckResults(Nil, checksumResults, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val files = File(consignmentId, fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some(sourceBucket), Some(sourceKey), None, None, None, None, fileChecks) :: Nil
+
+    // Stub S3 to return invalid content (0x81 fails both UTF-8 and Windows-1252)
+    val invalidBytes = Array[Byte](0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x81.toByte)
+    wiremockS3Server.stubFor(get(urlPathMatching(s".*$sourceKey.*")).willReturn(ok().withBody(invalidBytes)))
+
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+    val input = new ByteArrayInputStream(s3Input.getBytes())
+    val output = new ByteArrayOutputStream()
+    new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
+
+    val result = getInputFromS3().statuses
+    val ffidStatus = result.statuses.find(_.statusName == "FFID").get
+    ffidStatus.statusValue should equal("Unidentified")
+  }
+
+  "run" should "return Unidentified for an unidentified file (empty puid) when S3 source is unavailable" in {
+    val consignmentId = UUID.randomUUID()
+    val fileId = UUID.randomUUID()
+    // No s3SourceBucket/key -> fetchFileBytes returns None
+    val matches = FFIDMetadataInputMatches(Option("bin"), "Extension", Option(""), Some(false), Some("format-name")) :: Nil
+    val checksumResults = List(ChecksumResult("validChecksum", UUID.randomUUID()))
+    val fileChecks = FileCheckResults(Nil, checksumResults, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val files = File(consignmentId, fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", None, None, None, None, None, None, fileChecks) :: Nil
+
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+    val input = new ByteArrayInputStream(s3Input.getBytes())
+    val output = new ByteArrayOutputStream()
+    new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
+
+    val result = getInputFromS3().statuses
+    val ffidStatus = result.statuses.find(_.statusName == "FFID").get
+    ffidStatus.statusValue should equal("Unidentified")
+  }
+
+  "run" should "return Success for an extension-only txt file when content is valid UTF-8" in {
+    val consignmentId = UUID.randomUUID()
+    val fileId = UUID.randomUUID()
+    val sourceBucket = "source-bucket"
+    val sourceKey = "object/txt-valid"
+    // Extension basis + txt extension + non-empty puid triggers extensionOnlyTextFile branch
+    val matches = FFIDMetadataInputMatches(Option("txt"), "Extension", Option(allowedStandardPuid), Some(false), Some("format-name")) :: Nil
+    val checksumResults = List(ChecksumResult("validChecksum", UUID.randomUUID()))
+    val fileChecks = FileCheckResults(Nil, checksumResults, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val files = File(consignmentId, fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some(sourceBucket), Some(sourceKey), None, None, None, None, fileChecks) :: Nil
+
+    // Stub S3 to return valid UTF-8 content
+    wiremockS3Server.stubFor(get(urlPathMatching(s".*$sourceKey.*")).willReturn(ok("Valid text content")))
+
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+    val input = new ByteArrayInputStream(s3Input.getBytes())
+    val output = new ByteArrayOutputStream()
+    new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
+
+    val result = getInputFromS3().statuses
+    val ffidStatus = result.statuses.find(_.statusName == "FFID").get
+    ffidStatus.statusValue should equal("Success")
+  }
+
+  "run" should "return Unidentified for an extension-only txt file when content is invalid" in {
+    val consignmentId = UUID.randomUUID()
+    val fileId = UUID.randomUUID()
+    val sourceBucket = "source-bucket"
+    val sourceKey = "object/txt-invalid"
+    val matches = FFIDMetadataInputMatches(Option("txt"), "Extension", Option(allowedStandardPuid), Some(false), Some("format-name")) :: Nil
+    val checksumResults = List(ChecksumResult("validChecksum", UUID.randomUUID()))
+    val fileChecks = FileCheckResults(Nil, checksumResults, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val files = File(consignmentId, fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some(sourceBucket), Some(sourceKey), None, None, None, None, fileChecks) :: Nil
+
+    // Stub S3 to return invalid content
+    val invalidBytes = Array[Byte](0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x81.toByte)
+    wiremockS3Server.stubFor(get(urlPathMatching(s".*$sourceKey.*")).willReturn(ok().withBody(invalidBytes)))
+
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+    val input = new ByteArrayInputStream(s3Input.getBytes())
+    val output = new ByteArrayOutputStream()
+    new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
+
+    val result = getInputFromS3().statuses
+    val ffidStatus = result.statuses.find(_.statusName == "FFID").get
+    ffidStatus.statusValue should equal("Unidentified")
+  }
+
+  "run" should "return Success for an extension-only csv file when content is valid" in {
+    val consignmentId = UUID.randomUUID()
+    val fileId = UUID.randomUUID()
+    val sourceBucket = "source-bucket"
+    val sourceKey = "object/csv-valid"
+    val matches = FFIDMetadataInputMatches(Option("csv"), "Extension", Option(allowedStandardPuid), Some(false), Some("format-name")) :: Nil
+    val checksumResults = List(ChecksumResult("validChecksum", UUID.randomUUID()))
+    val fileChecks = FileCheckResults(Nil, checksumResults, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val files = File(consignmentId, fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", Some(sourceBucket), Some(sourceKey), None, None, None, None, fileChecks) :: Nil
+
+    // Stub S3 to return valid content
+    wiremockS3Server.stubFor(get(urlPathMatching(s".*$sourceKey.*")).willReturn(ok("col1,col2\nval1,val2")))
+
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+    val input = new ByteArrayInputStream(s3Input.getBytes())
+    val output = new ByteArrayOutputStream()
+    new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
+
+    val result = getInputFromS3().statuses
+    val ffidStatus = result.statuses.find(_.statusName == "FFID").get
+    ffidStatus.statusValue should equal("Success")
+  }
+
+  "run" should "return Success for an extension-only txt file when S3 source is unavailable" in {
+    val consignmentId = UUID.randomUUID()
+    val fileId = UUID.randomUUID()
+    // No s3 source -> fetchFileBytes returns None -> falls through to disallowedReason.getOrElse(Success)
+    val matches = FFIDMetadataInputMatches(Option("txt"), "Extension", Option(allowedStandardPuid), Some(false), Some("format-name")) :: Nil
+    val checksumResults = List(ChecksumResult("validChecksum", UUID.randomUUID()))
+    val fileChecks = FileCheckResults(Nil, checksumResults, FFID(fileId, "software", "softwareVersion", "binarySignature", "containerSignature", "method", matches) :: Nil)
+    val files = File(consignmentId, fileId, UUID.randomUUID(), "standard", "1", "checksum", "originalPath", None, None, None, None, None, None, fileChecks) :: Nil
+
+    val inputString = Input(files, RedactedResults(Nil, Nil), StatusResult(Nil)).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+    val input = new ByteArrayInputStream(s3Input.getBytes())
+    val output = new ByteArrayOutputStream()
+    new Lambda(FileCheckStatusEvaluator.noOp).run(input, output)
+
+    val result = getInputFromS3().statuses
+    val ffidStatus = result.statuses.find(_.statusName == "FFID").get
+    ffidStatus.statusValue should equal("Success")
   }
 }

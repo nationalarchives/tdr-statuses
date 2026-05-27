@@ -68,6 +68,13 @@ The lambda processes the following file statuses for each file.
 * If the server checksum matches the zero byte file checksum (`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`) or the UTF-8 BOM file checksum (`f01a374e9c81e3db89b3a42940c4d6a5447684986a1296e42bf13f196eed6295`) then `ZeroByteFile`.
 * If the file size is `0` then `ZeroByteFile`.
 * If the consignment type is standard and the puid is in the DisallowedPuids table and is active then get the status from the `Reason` column.
+  * If the reason is `Unidentified` (empty PUID), the file is downloaded from S3 and validated:
+    * If the file content is valid UTF-8 then `Success`.
+    * Otherwise, if every byte falls within the allowed Windows-1252 range (0x09, 0x0A, 0x0D, 0x20-0x7E, 0x80, 0x82-0x8C, 0x8E, 0x91-0x9C, 0x9E-0xFF) then `Success`.
+    * Otherwise `Unidentified`.
+* If identified by extension only and the extension is `txt` or `csv`, the file is downloaded from S3 and validated:
+  * If the file content is valid UTF-8 or passes the Windows-1252 range check then the normal status applies.
+  * If the content fails both checks then `Unidentified`.
 * Otherwise `Success`.
 
 ### ChecksumMatch
