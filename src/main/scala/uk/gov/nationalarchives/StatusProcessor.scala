@@ -10,13 +10,15 @@ import uk.gov.nationalarchives.aws.utils.s3.S3Utils
 class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Utils: S3Utils) {
 
   private def fetchFileBytes(file: File): IO[Option[Array[Byte]]] = {
-    (file.s3SourceBucket, file.s3SourceBucketKey) match {
-      case (Some(bucket), Some(key)) =>
-        Resource
-          .fromAutoCloseable(IO(s3Utils.getObjectAsStream(bucket, key)))
-          .use(is => IO(is.readAllBytes()))
-          .map(Some(_))
-          .handleError(_ => None)
+    def readFromS3(bucket: String, key: String): IO[Option[Array[Byte]]] =
+      Resource
+        .fromAutoCloseable(IO(s3Utils.getObjectAsStream(bucket, key)))
+        .use(is => IO(is.readAllBytes()))
+        .map(Some(_))
+        .handleError(_ => None)
+
+    (file.s3CleanDestinationBucket, file.s3CleanDestinationBucketKey) match {
+      case (Some(bucket), Some(key)) => readFromS3(bucket, key)
       case _ => IO.pure(None)
     }
   }
