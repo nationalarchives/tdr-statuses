@@ -28,4 +28,6 @@ object Dependencies {
   lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.8"
   lazy val utf8Validator = "uk.gov.nationalarchives" % "utf8-validator" % "1.2"
   lazy val catsEffectTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.8.0"
+  lazy val log4cats = "org.typelevel" %% "log4cats-slf4j" % "2.8.0"
+  lazy val slf4jSimple = "org.slf4j" % "slf4j-simple" % "2.0.18"
 }

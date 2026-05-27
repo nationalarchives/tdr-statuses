@@ -23,6 +23,8 @@ lazy val root = (project in file("."))
       authUtils,
       typesafeConfig,
       utf8Validator,
+      log4cats,
+      slf4jSimple,
       mockito % Test,
       scalaTest % Test,
       wiremock % Test,
