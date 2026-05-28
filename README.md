@@ -60,21 +60,24 @@ Given this json as input:
 The lambda processes the following file statuses for each file.
 
 ### Antivirus
-* `Success` if antivirus result is empty
-* `VirusDetected` if the result is not empty
+* `Success` if antivirus result is empty or `NO_THREATS_FOUND`
+* `VirusDetected` if the result is anything else
 
 ### FFID
 * If the consignment type is judgment and the puid is not in the AllowedPuids table then `NonJudgmentFormat`.
 * If the server checksum matches the zero byte file checksum (`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`) or the UTF-8 BOM file checksum (`f01a374e9c81e3db89b3a42940c4d6a5447684986a1296e42bf13f196eed6295`) then `ZeroByteFile`.
 * If the file size is `0` then `ZeroByteFile`.
-* If the consignment type is standard and the puid is in the DisallowedPuids table and is active then get the status from the `Reason` column.
-  * If the reason is `Unidentified` (empty PUID), the file is downloaded from the clean S3 bucket and validated:
-    * If the file content is valid UTF-8 then `Success`.
-    * Otherwise, if every byte falls within the allowed Windows-1252 range (0x09, 0x0A, 0x0D, 0x20-0x7E, 0x80, 0x82-0x8C, 0x8E, 0x91-0x9C, 0x9E-0xFF) then `Success`.
-    * Otherwise `Unidentified`.
-* If identified by extension only and the extension is `txt` or `csv`, the file is downloaded from the clean S3 bucket and validated:
-  * If the file content is valid UTF-8 or passes the Windows-1252 range check then the normal status applies.
+* If there are no file-format results then `Failed`.
+* If more than one non-empty PUID is present then `MultipleFormats`.
+* If all format matches are unidentified (empty PUID), the file is downloaded from the clean S3 bucket and validated:
+  * If the file content is valid UTF-8 then `Success`.
+  * Otherwise, if every byte falls within the allowed Windows-1252 range (0x09, 0x0A, 0x0D, 0x20-0x7E, 0x80, 0x82-0x8C, 0x8E, 0x91-0x9C, 0x9E-0xFF) then `Success`.
+  * Otherwise `Unidentified`.
+* If all matches are identified by extension only and at least one extension is `txt` or `csv`, the file is downloaded from the clean S3 bucket and validated:
+  * If the file content is valid UTF-8 or passes the Windows-1252 range check then the normal status applies (`Success` or an active disallowed reason).
   * If the content fails both checks then `Unidentified`.
+  * If the file cannot be read from S3 then the normal status applies (`Success` or an active disallowed reason).
+* If the consignment type is standard and the puid is in the DisallowedPuids table and is active then get the status from the `Reason` column.
 * Otherwise `Success`.
 
 ### ChecksumMatch
@@ -100,7 +103,8 @@ The lambda processes the following file statuses for each file.
 
 ### ServerFFID
 * Check each FFID file status. If the statuses are all either `Success` or in the `DisallowedPuids` table but inactive then set to `Completed`.
-* If any of the FFID file statuses are set to a status from the `DisallowedPuids` table where `Active` is true then `CompletedWithErrors`
+* If any FFID file status is set to a status from the `DisallowedPuids` table where `Active` is true, or has `MultipleFormats`, then `CompletedWithIssues`.
+* If any FFID file status is `Failed`, then `Failed`.
 
 ## Adding a new status
 * Add a method into `StatusProcessor`. This should return `IO[List[Status]]`
