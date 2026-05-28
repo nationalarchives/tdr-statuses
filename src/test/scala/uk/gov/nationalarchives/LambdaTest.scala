@@ -10,7 +10,7 @@ import io.circe.syntax._
 import org.mockito.ArgumentMatchers.{any, argThat}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers._
-import org.scalatest.prop.{TableFor2, TableFor3, TableFor4, TableFor5}
+import org.scalatest.prop.{TableFor2, TableFor3, TableFor5}
 import uk.gov.nationalarchives.BackendCheckUtils._
 import uk.gov.nationalarchives.services.FileCheckStatusEvaluator
 
@@ -448,9 +448,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     )
   }
 
-  // --- FileContentValidator integration tests ---
-
-  "run" should "return Success for an unidentified file (empty puid) when file content is valid UTF-8" in {
+ "run" should "return Success for an unidentified file (empty puid) when file content is valid UTF-8" in {
     val consignmentId = UUID.randomUUID()
     val fileId = UUID.randomUUID()
     val cleanBucket = "clean-bucket"
@@ -475,7 +473,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     ffidStatus.statusValue should equal("Success")
   }
 
-  "run" should "return Unidentified for an unidentified file (empty puid) when file content is not valid" in {
+  "run" should "return Unidentified for an unidentified file (empty puid) when file content is not valid UTF-8 or Windows-1252" in {
     val consignmentId = UUID.randomUUID()
     val fileId = UUID.randomUUID()
     val cleanBucket = "clean-bucket"
@@ -546,7 +544,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     ffidStatus.statusValue should equal("Success")
   }
 
-  "run" should "return Unidentified for an extension-only txt file when content is invalid" in {
+  "run" should "return Unidentified for an extension-only txt file when content is not valid UTF-8 or Windows-1252" in {
     val consignmentId = UUID.randomUUID()
     val fileId = UUID.randomUUID()
     val cleanBucket = "clean-bucket"

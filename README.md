@@ -72,6 +72,7 @@ The lambda processes the following file statuses for each file.
 * If all format matches are unidentified (empty PUID), the file is downloaded from the clean S3 bucket and validated:
   * If the file content is valid UTF-8 then `Success`.
   * Otherwise, if every byte falls within the allowed Windows-1252 range (0x09, 0x0A, 0x0D, 0x20-0x7E, 0x80, 0x82-0x8C, 0x8E, 0x91-0x9C, 0x9E-0xFF) then `Success`.
+  * If the file cannot be read from S3 then `Unidentified`.
   * Otherwise `Unidentified`.
 * If the primary format match is identified by extension only and the extension is `txt` or `csv`, the file is downloaded from the clean S3 bucket and validated:
   * If the file content is valid UTF-8 or passes the Windows-1252 range check then the normal status applies (`Success` or an active disallowed reason).

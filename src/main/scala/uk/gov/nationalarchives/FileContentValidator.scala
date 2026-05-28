@@ -17,7 +17,6 @@ object FileContentValidator {
       (value >= 0x9E && value <= 0xFF)
   }
 
-
   /**
    * Validates file content from a stream with early termination.
    *

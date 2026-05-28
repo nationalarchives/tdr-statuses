@@ -49,6 +49,7 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
   private val Completed = "Completed"
   private val ClientChecks = "ClientChecks"
   private val ServerRedaction = "ServerRedaction"
+  private val Unidentified = "Unidentified"
 
   def antivirus(): IO[List[Status]] = {
     input.results.map(result => {
@@ -64,8 +65,6 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
       Status(result.fileId, FileType, Antivirus, status)
     })
   }.pure[IO]
-
-  private val Unidentified = "Unidentified"
 
   def ffid(): IO[List[Status]] = {
     input.results.traverse { result =>
