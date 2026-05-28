@@ -21,12 +21,10 @@ class Lambda(fileCheckStatusEvaluator: => FileCheckStatusEvaluator) {
 
   private val backendChecksUtils = BackendCheckUtils(sys.env("S3_ENDPOINT"))
 
-  private def statusProcessor(input: Input): IO[StatusProcessor[IO]] = for {
-    allPuids <- PuidJsonReader().allPuids
-    processor <- StatusProcessor[IO](input, allPuids)
-  } yield processor
+  private def statusProcessor(input: Input): IO[StatusProcessor] =
+    PuidJsonReader().allPuids.map(allPuids => StatusProcessor(input, allPuids))
 
-  private def statusChecks(processor: StatusProcessor[IO]): IO[List[Status]] = for {
+  private def statusChecks(processor: StatusProcessor): IO[List[Status]] = for {
     ffid <- processor.ffid()
     av <- processor.antivirus()
     checksumMatch <- processor.checksumMatch()

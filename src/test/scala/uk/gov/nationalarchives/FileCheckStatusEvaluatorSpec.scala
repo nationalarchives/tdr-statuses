@@ -35,6 +35,10 @@ class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with M
     "originalPath": String,
     Some("3SourceBucket"): Option[String],
     Some("s3SourceBucketKey"),
+    None,
+    None,
+    None,
+    None,
     FileCheckResults(List.empty, List.empty, List.empty)
   )
 
