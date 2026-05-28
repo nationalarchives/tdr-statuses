@@ -5,8 +5,6 @@ import org.scalatest.matchers.should.Matchers._
 
 class FileContentValidatorSpec extends AnyFlatSpec {
 
-  // --- Streaming variant tests ---
-
   private def stream(bytes: Array[Byte]): java.io.ByteArrayInputStream =
     new java.io.ByteArrayInputStream(bytes)
 
@@ -67,4 +65,3 @@ class FileContentValidatorSpec extends AnyFlatSpec {
     bytesRead should be < trailingSize
   }
 }
-
