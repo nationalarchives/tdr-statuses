@@ -569,7 +569,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     ffidStatus.statusValue should equal("Unidentified")
   }
 
-  "run" should "return Success for an extension-only csv file when content is valid" in {
+  "run" should "return Success for an extension-only csv file when content is valid UTF-8" in {
     val consignmentId = UUID.randomUUID()
     val fileId = UUID.randomUUID()
     val cleanBucket = "clean-bucket"
