@@ -70,7 +70,8 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
   def ffid(): IO[List[Status]] = {
     input.results.traverse { result =>
       val fileFormat = result.fileCheckResults.fileFormat
-      val puidMatches = fileFormat.flatMap(_.matches.map(_.puid.getOrElse("")))
+      val allMatches = fileFormat.flatMap(_.matches)
+      val puidMatches = allMatches.map(_.puid.getOrElse(""))
       val disallowedReason = allPuidInformation.disallowedPuids
         .filter(_.active)
         .filter(_.puid.nonEmpty)
@@ -85,12 +86,12 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
       val serverChecksum = result.fileCheckResults.checksum.map(_.sha256Checksum).headOption
       val isEmptyFile = serverChecksum.exists(emptyFileChecksums.contains)
 
-      val isUnidentified = puidMatches.nonEmpty && puidMatches.forall(_.isEmpty) && fileFormat.nonEmpty
-
-      val allMatches = fileFormat.flatMap(_.matches)
-      val extensionOnlyTextFile = allMatches.nonEmpty &&
-        allMatches.forall(m => m.identificationBasis.toLowerCase.contains("extension")) &&
-        allMatches.exists(m => m.extension.exists(ext => ext.equalsIgnoreCase("txt") || ext.equalsIgnoreCase("csv")))
+      val isUnidentified = puidMatches.nonEmpty && puidMatches.forall(_.isEmpty)
+      val hasMultiplePuids = puidMatches.count(_.nonEmpty) > 1
+      val extensionOnlyTextFile = allMatches.headOption.exists { m =>
+        m.identificationBasis.toLowerCase.contains("extension") &&
+          m.extension.exists(ext => ext.equalsIgnoreCase("txt") || ext.equalsIgnoreCase("csv"))
+      }
 
       result match {
         case r if r.consignmentType == "judgment" && judgmentDisAllowedPuid =>
@@ -101,7 +102,7 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
           Status(result.fileId, FileType, FFIDStatus, ZeroByteFile).pure[IO]
         case _ if fileFormat.isEmpty =>
           Status(result.fileId, FileType, FFIDStatus, Failed).pure[IO]
-        case _ if puidMatches.count(_.nonEmpty) > 1 =>
+        case _ if hasMultiplePuids =>
           Status(result.fileId, FileType, FFIDStatus, MultiplePuids).pure[IO]
         case _ if isUnidentified =>
           validateFileContent(result).map {
