@@ -55,7 +55,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
     def filterStatus(name: String): List[String] = statuses.filter(_.statusName == name).map(_.statusValue)
 
-    filterStatus("FFID").head should equal(Success)
+    filterStatus("FFID").head should equal("Unidentified")
     filterStatus("Antivirus").head should equal(Success)
     filterStatus("ChecksumMatch").head should equal(Success)
     filterStatus("ServerChecksum").head should equal(Completed)
@@ -593,7 +593,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     ffidStatus.statusValue should equal("Success")
   }
 
-  "run" should "return Success for an extension-only txt file when no clean bucket is available" in {
+  "run" should "return Unidentified for an extension-only txt file when no clean bucket is available" in {
     val consignmentId = UUID.randomUUID()
     val fileId = UUID.randomUUID()
     // No s3CleanDestinationBucket -> fetchFileBytes returns None -> falls through to disallowedReason.getOrElse(Success)
@@ -610,7 +610,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
     val result = getInputFromS3().statuses
     val ffidStatus = result.statuses.find(_.statusName == "FFID").get
-    ffidStatus.statusValue should equal("Success")
+    ffidStatus.statusValue should equal("Unidentified")
   }
 
   "run" should "return Success without content validation for a txt file identified by binary signature" in {

@@ -114,11 +114,9 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
           validateFileContent(result).map {
             case Some(true) =>
               Status(result.fileId, FileType, FFIDStatus, disallowedReason.getOrElse(Success))
-            case Some(false) =>
+            case Some(false) | None =>
               Status(result.fileId, FileType, FFIDStatus, Unidentified)
-            case None =>
-              Status(result.fileId, FileType, FFIDStatus, disallowedReason.getOrElse(Success))
-          }
+        }
         case _ =>
           Status(result.fileId, FileType, FFIDStatus, disallowedReason.getOrElse(Success)).pure[IO]
       }

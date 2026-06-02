@@ -76,8 +76,7 @@ The lambda processes the following file statuses for each file.
   * Otherwise `Unidentified`.
 * If the primary format match is identified by extension only and the extension is `txt` or `csv`, the file is downloaded from the clean S3 bucket and validated:
   * If the file content is valid UTF-8 or passes the Windows-1252 range check then the normal status applies (`Success` or an active disallowed reason).
-  * If the content fails both checks then `Unidentified`.
-  * If the file cannot be read from S3 then the normal status applies (`Success` or an active disallowed reason).
+  * If the content fails both checks or the file cannot be read from S3 then `Unidentified`.  
 * If the consignment type is standard and the puid is in the DisallowedPuids table and is active then get the status from the `Reason` column.
 * Otherwise `Success`.
 
