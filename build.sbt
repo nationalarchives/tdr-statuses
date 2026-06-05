@@ -6,7 +6,7 @@ ThisBuild / organization     := "uk.gov.nationalarchives"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "tdr-statuses",
+    name := "tdr-statuses-lambda",
     libraryDependencies ++= Seq(
       awsS3,
       awsSsm,
@@ -23,6 +23,7 @@ lazy val root = (project in file("."))
       authUtils,
       typesafeConfig,
       utf8Validator,
+      tdrStatuses,
       log4cats,
       slf4jSimple,
       mockito % Test,

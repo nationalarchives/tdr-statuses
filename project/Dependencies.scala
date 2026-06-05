@@ -10,7 +10,7 @@ object Dependencies {
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
   lazy val snsUtils = "uk.gov.nationalarchives" %% "sns-utils" % "0.1.330"
-  lazy val s3Utils = "uk.gov.nationalarchives" %% "s3-utils" % "0.1.330"
+  lazy val s3Utils = "uk.gov.nationalarchives" %% "s3-utils" % "0.1.332-SNAPSHOT"
   lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.213"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
@@ -27,6 +27,7 @@ object Dependencies {
   lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.288"
   lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.8"
   lazy val utf8Validator = "uk.gov.nationalarchives" % "utf8-validator" % "1.2"
+  lazy val tdrStatuses = "uk.gov.nationalarchives" %% "tdr-statuses" % "0.0.29"
   lazy val catsEffectTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.8.0"
   lazy val log4cats = "org.typelevel" %% "log4cats-slf4j" % "2.8.0"
   lazy val slf4jSimple = "org.slf4j" % "slf4j-simple" % "2.0.18"
