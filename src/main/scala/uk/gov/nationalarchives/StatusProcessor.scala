@@ -39,7 +39,6 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
         }
     }
   }
-  private val Unidentified = "Unidentified"
 
   def antivirus(): IO[List[Status]] = {
     input.results.map(result => {
@@ -98,14 +97,14 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
             case Some(true) =>
               Status(result.fileId, FileScope.value, FFIDType.id, SuccessValue.value)
             case _ =>
-              Status(result.fileId, FileScope.value, FFIDType.id, Unidentified)
+              Status(result.fileId, FileScope.value, FFIDType.id, Unidentified.value)
           }
         case _ if extensionOnlyTextFile =>
           validateFileContent(result).map {
             case Some(true) =>
               Status(result.fileId, FileScope.value, FFIDType.id, disallowedReason.getOrElse(SuccessValue.value))
             case Some(false) | None =>
-              Status(result.fileId, FileScope.value, FFIDType.id, Unidentified)
+              Status(result.fileId, FileScope.value, FFIDType.id, Unidentified.value)
         }
         case _ =>
           Status(result.fileId, FileScope.value, FFIDType.id, disallowedReason.getOrElse(SuccessValue.value)).pure[IO]
