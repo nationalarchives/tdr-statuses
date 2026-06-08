@@ -35,7 +35,7 @@ class FileContentValidatorSpec extends AnyFlatSpec {
     FileContentValidator.isAllowedContent(stream(bytes)) should be(false)
   }
 
-  it should "return true across chunk boundaries for valid multi-byte UTF-8" in {
+  it should "return true for valid multi-byte UTF-8 content" in {
     val bytes = "Héllo wörld café".getBytes("UTF-8")
     FileContentValidator.isAllowedContent(stream(bytes)) should be(true)
   }
