@@ -91,14 +91,14 @@ class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with M
 
       when(mockGraphQl.getConsignmentDetails(any[File]))
         .thenReturn(IO.pure(details))
-      when(mockNotification.sendFileCheckFailureNotification(any[ConsignmentDetails]))
+      when(mockNotification.sendFileCheckFailureNotification(any[ConsignmentDetails], any[String]))
         .thenReturn(IO.pure(mockResponse))
 
       val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
       val statuses = List(Status(consignmentId, "Consignment", "ServerAntivirus", "Failed"))
       eval.processAndNotify(file, statuses).asserting { result =>
         verify(mockGraphQl).getConsignmentDetails(file)
-        verify(mockNotification).sendFileCheckFailureNotification(details)
+        verify(mockNotification).sendFileCheckFailureNotification(org.mockito.ArgumentMatchers.eq(details), any[String])
         result shouldBe Some(mockResponse)
       }
     }

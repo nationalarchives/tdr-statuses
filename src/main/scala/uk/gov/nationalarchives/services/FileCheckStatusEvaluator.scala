@@ -3,8 +3,10 @@ package uk.gov.nationalarchives.services
 import cats.effect.IO
 import software.amazon.awssdk.services.sns.model.PublishResponse
 import uk.gov.nationalarchives.BackendCheckUtils.{File, Status}
-
-import java.util.UUID
+import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusActions
+import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusActions.{TNASupport, UserFixable}
+import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusTypes._
+import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusValues._
 
 class FileCheckStatusEvaluator(
   graphQlApiService: GraphQlApiService,
@@ -18,7 +20,15 @@ class FileCheckStatusEvaluator(
     if (shouldSendFailureNotification(statuses)) {
       for {
         details  <- graphQlApiService.getConsignmentDetails(result)
-        response <- notificationService.sendFileCheckFailureNotification(details)
+        statusesToAction = statuses.flatMap(status => StatusActions.action(toStatusType(status.statusName), StatusValue(status.statusValue)))
+        hasUserFixable   = statusesToAction.exists(_.actionType == UserFixable)
+        hasTNASupport    = statusesToAction.exists(_.actionType == TNASupport)
+        resolutionPath   = (hasUserFixable, hasTNASupport) match {
+                             case (true, true)  => "UserFixableAndTNASupport"
+                             case (true, false) => "UserFixable"
+                             case _             => "TNASupport"
+                           }
+        response <- notificationService.sendFileCheckFailureNotification(details, resolutionPath)
       } yield Some(response)
     } else {
       IO.pure(None)
