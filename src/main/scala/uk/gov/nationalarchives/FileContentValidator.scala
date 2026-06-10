@@ -47,9 +47,9 @@ object FileContentValidator {
     Try(new Utf8Validator(validationHandler).validate(stream)).isSuccess
   }
 
-  private def drainStream(stream: InputStream): Unit = {
+  private def drainStream(stream: Windows1252TrackingInputStream): Unit = {
     val buffer = new Array[Byte](DrainBufferSize)
-    while (stream.read(buffer) != -1) {}
+    while (stream.isWindows1252Valid && stream.read(buffer) != -1) {}
   }
 
   /**
