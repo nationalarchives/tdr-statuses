@@ -2,6 +2,8 @@ package uk.gov.nationalarchives
 
 import cats.effect.{IO, Resource}
 import cats.implicits._
+import cats.effect.implicits._
+import java.util.concurrent.ConcurrentHashMap
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import uk.gov.nationalarchives.BackendCheckUtils.{File, Input, Status}
@@ -16,8 +18,8 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
 
   private implicit val logger: Logger[IO] = Slf4jLogger.getLogger[IO]
 
-  private val fileUTF8ValidationCache: scala.collection.mutable.Map[String, Option[Boolean]] =
-    scala.collection.mutable.Map.empty
+  private val fileUTF8ValidationCache: ConcurrentHashMap[String, Option[Boolean]] =
+    new ConcurrentHashMap[String, Option[Boolean]]()
 
   private def validateFileContent(file: File): IO[Option[Boolean]] = {
     def readFromS3(bucket: String, key: String): IO[Option[Boolean]] =
@@ -29,7 +31,7 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
           Logger[IO].error(s"Failed to validate file from s3://$bucket/$key for fileId=${file.fileId}: ${err.getMessage}").as(None)
         }
 
-    fileUTF8ValidationCache.get(file.fileId.toString) match {
+    Option(fileUTF8ValidationCache.get(file.fileId.toString)) match {
       case Some(cached) => IO.pure(cached)
       case None =>
         (file.s3CleanDestinationBucket, file.s3CleanDestinationBucketKey) match {
@@ -56,7 +58,7 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
   }.pure[IO]
 
   def ffid(): IO[List[Status]] = {
-    input.results.traverse { result =>
+    input.results.parTraverseN(20) { result =>
       val fileFormat = result.fileCheckResults.fileFormat
       val allMatches = fileFormat.flatMap(_.matches)
       val puidMatches = allMatches.map(_.puid.getOrElse(""))
