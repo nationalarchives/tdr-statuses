@@ -11,14 +11,15 @@ import java.util.UUID
 
 class NotificationService(snsUtils: SNSUtils, topicArn: String, environment: String) {
 
-  def sendFileCheckFailureNotification(details: ConsignmentDetails): IO[PublishResponse] = {
+  def sendFileCheckFailureNotification(details: ConsignmentDetails, resolutionPath: ResolutionPath): IO[PublishResponse] = {
     val event = FileCheckFailureEvent(
       consignmentType = details.consignmentType,
       consignmentReference = details.consignmentReference,
       consignmentId = details.consignmentId,
       transferringBodyName = details.transferringBody.getOrElse("Unknown"),
       userId = details.userId,
-      environment = environment
+      environment = environment,
+      resolutionPath = resolutionPath.id
     )
 
     IO(snsUtils.publish(event.asJson.noSpaces, topicArn))
@@ -33,7 +34,8 @@ object NotificationService {
                                     consignmentId: UUID,
                                     transferringBodyName: String,
                                     userId: UUID,
-                                    environment: String
+                                    environment: String,
+                                    resolutionPath: String
   )
 
   def apply(snsUtils: SNSUtils, topicArn: String, environment: String): NotificationService =

@@ -8,7 +8,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
 import software.amazon.awssdk.services.sns.model.PublishResponse
 import uk.gov.nationalarchives.aws.utils.sns.SNSUtils
-import uk.gov.nationalarchives.services.{ConsignmentDetails, NotificationService}
+import uk.gov.nationalarchives.services.{ConsignmentDetails, NotificationService, ResolutionPath}
+import uk.gov.nationalarchives.services.ResolutionPath._
 import uk.gov.nationalarchives.services.NotificationService.FileCheckFailureEvent
 
 import java.util.UUID
@@ -38,7 +39,7 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
       Mockito.when(mockSnsUtils.publish(messageCaptor.capture(), topicArnCaptor.capture())).thenReturn(mockResponse)
 
       val service = NotificationService(mockSnsUtils, topicArn, environment)
-      service.sendFileCheckFailureNotification(details).asserting { result =>
+      service.sendFileCheckFailureNotification(details, TNASupport).asserting { result =>
         result.messageId() shouldBe "msg-123"
 
         topicArnCaptor.getValue shouldBe topicArn
@@ -52,6 +53,7 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
         parsed.transferringBodyName shouldBe "Test Body"
         parsed.userId shouldBe userId
         parsed.environment shouldBe "integration"
+        parsed.resolutionPath shouldBe "TNASupport"
       }
     }
 
@@ -64,7 +66,7 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
       Mockito.when(mockSnsUtils.publish(messageCaptor.capture(), ArgumentMatchers.any[String]())).thenReturn(mockResponse)
 
       val service = NotificationService(mockSnsUtils, topicArn, environment)
-      service.sendFileCheckFailureNotification(detailsNoBody).asserting { result =>
+      service.sendFileCheckFailureNotification(detailsNoBody, TNASupport).asserting { result =>
         val event = decode[FileCheckFailureEvent](messageCaptor.getValue)
         event.toOption.get.transferringBodyName shouldBe "Unknown"
       }
@@ -78,7 +80,7 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
 
       val service = NotificationService(mockSnsUtils, topicArn, environment)
 
-      service.sendFileCheckFailureNotification(details).attempt.asserting { result =>
+      service.sendFileCheckFailureNotification(details, TNASupport).attempt.asserting { result =>
         result.left.toOption.get shouldBe a[RuntimeException]
       }
     }
