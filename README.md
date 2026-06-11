@@ -108,7 +108,7 @@ The lambda processes the following file statuses for each file.
 
 ## File Check Error Information
 
-After evaluating file statuses, the lambda writes error information objects to the `tdr-transfer-errors-<environment>` S3 bucket for any file-level status that is not `Success` or `Completed`.
+After evaluating file statuses, the lambda writes error information objects to the `tdr-transfer-errors-<environment>` S3 bucket for any file that has one or more file-level statuses that are not `Success` or `Completed`.
 
 Each error object is written to the key `<consignmentId>/filechecks/<fileId>.error` and contains:
 - `file` — the full file object (including `consignmentId`, `fileId`, `originalPath`, etc.)
