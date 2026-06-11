@@ -24,6 +24,7 @@ lazy val root = (project in file("."))
       typesafeConfig,
       utf8Validator,
       tdrStatuses,
+      objectKeyContext,
       log4cats,
       slf4jSimple,
       mockito % Test,

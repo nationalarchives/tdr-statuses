@@ -8,6 +8,7 @@ import io.circe.syntax._
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import uk.gov.nationalarchives.BackendCheckUtils._
+import uk.gov.nationalarchives.tdr.common.utils.objectkeycontext.ObjectCategories.FileChecks
 import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusScopes.FileScope
 import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusValues.{CompletedValue, SuccessValue}
 
@@ -29,7 +30,7 @@ class FileCheckErrorInformationWriter(s3Endpoint: String, environment: String) {
       .parTraverse_ { case (fileId, statuses) =>
         filesById.get(fileId).fold(Logger[IO].warn(s"Missing file for lookup id $fileId; skipping")) { file =>
           val error = FileCheckErrorInformationWriter.FileCheckErrorInformation(file, statuses)
-          val key = s"${file.consignmentId}/filechecks/$fileId.error"
+          val key = s"${file.consignmentId}/${FileChecks.id}/$fileId.error"
           IO.fromEither(backendChecksUtils.writeResultJson(key, errorBucket, error.asJson.printWith(Printer.noSpaces))).void
         }
       }
