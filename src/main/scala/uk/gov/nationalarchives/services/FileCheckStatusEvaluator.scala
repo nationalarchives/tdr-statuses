@@ -21,7 +21,7 @@ class FileCheckStatusEvaluator(
     if (shouldSendFailureNotification(statuses)) {
       for {
         details  <- graphQlApiService.getConsignmentDetails(result)
-        statusesToAction = statuses.flatMap(status => StatusActions.action(toStatusType(status.statusName), StatusValue(status.statusValue)))
+        statusesToAction = statuses.filterNot(_.statusType == "Consignment").flatMap(status => StatusActions.action(toStatusType(status.statusName), StatusValue(status.statusValue)))
         hasUserFixable   = statusesToAction.exists(_.actionType == ActionUserFixable)
         hasTNASupport    = statusesToAction.exists(_.actionType == ActionTNASupport)
         resolutionPath   = (hasUserFixable, hasTNASupport) match {
