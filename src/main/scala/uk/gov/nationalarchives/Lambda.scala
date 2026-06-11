@@ -20,7 +20,7 @@ class Lambda(fileCheckStatusEvaluator: => FileCheckStatusEvaluator) {
   def this() = this(Lambda.defaultEvaluator)
 
   private val backendChecksUtils = BackendCheckUtils(sys.env("S3_ENDPOINT"))
-  private val fileCheckErrorWriter = new FileCheckErrorWriter(sys.env("S3_ENDPOINT"), sys.env("ENVIRONMENT"))
+  private val fileCheckErrorWriter = new FileCheckErrorInformationWriter(sys.env("S3_ENDPOINT"), sys.env("ENVIRONMENT"))
 
   private def statusProcessor(input: Input): IO[StatusProcessor] =
     PuidJsonReader().allPuids.map(allPuids => StatusProcessor(input, allPuids))

@@ -10,10 +10,10 @@ import uk.gov.nationalarchives.BackendCheckUtils._
 import java.util.UUID
 import scala.jdk.CollectionConverters._
 
-class FileCheckErrorWriterSpec extends TestUtils with BeforeAndAfterAll {
+class FileCheckErrorInformationWriterSpec extends TestUtils with BeforeAndAfterAll {
 
   private val environment = "test"
-  private val writer = new FileCheckErrorWriter(sys.env("S3_ENDPOINT"), environment)
+  private val writer = new FileCheckErrorInformationWriter(sys.env("S3_ENDPOINT"), environment)
 
   override def beforeAll(): Unit = {
     wiremockS3Server.start()
@@ -66,12 +66,11 @@ class FileCheckErrorWriterSpec extends TestUtils with BeforeAndAfterAll {
     request.getUrl should include(s"/$consignmentId/filechecks/$fileId.error")
 
     val payload = request.getBodyAsString.split("\r\n")(1)
-    val decoded = decode[FileCheckErrorWriter.FileCheckError](payload).toOption.get
+    val decoded = decode[FileCheckErrorInformationWriter.FileCheckErrorInformation](payload).toOption.get
 
-    decoded.fileId should equal(fileId)
-    decoded.filePath should equal("folder/file.txt")
+    decoded.file.fileId should equal(fileId)
+    decoded.file.originalPath should equal("folder/file.txt")
     decoded.statuses.map(_.statusName) should contain("FFID")
-    decoded.redactedErrors.map(_.cause) should contain("RedactionFailed")
   }
 
   "writeFileCheckErrors" should "skip missing file ids instead of writing an error object for them" in {
