@@ -42,4 +42,9 @@ lazy val root = (project in file("."))
 
 Test / fork := true
 (Test / fork) := true
-(Test / envVars) := Map("AWS_ACCESS_KEY_ID" -> "test", "AWS_SECRET_ACCESS_KEY" -> "test", "S3_ENDPOINT" -> "http://localhost:9005")
+(Test / envVars) := Map(
+  "AWS_ACCESS_KEY_ID" -> "test",
+  "AWS_SECRET_ACCESS_KEY" -> "test",
+  "S3_ENDPOINT" -> "http://localhost:9005",
+  "ENVIRONMENT" -> "test"
+)
