@@ -40,6 +40,27 @@ class FileContentValidatorSpec extends AnyFlatSpec {
     FileContentValidator.isAllowedContent(stream(bytes)) should be(true)
   }
 
+  it should "return true when a multi-byte UTF-8 character spans a read boundary" in {
+    // Build input where a 2-byte UTF-8 char (é = 0xC3 0xA9) straddles the 8192-byte
+    // internal read buffer boundary. Fill 8191 bytes of ASCII, then place é.
+    val prefix = new Array[Byte](8191)
+    java.util.Arrays.fill(prefix, 'A'.toByte)
+    val multiByteChar = "é".getBytes("UTF-8") // [0xC3, 0xA9]
+    val suffix = "OK".getBytes("UTF-8")
+    val bytes = prefix ++ multiByteChar ++ suffix
+    FileContentValidator.isAllowedContent(stream(bytes)) should be(true)
+  }
+
+  it should "return false for a truncated multi-byte UTF-8 sequence at end of stream" in {
+    // 0xC3 is a leading byte expecting a continuation, but stream ends.
+    // All bytes are valid Windows-1252, so Windows-1252 fallback would pass,
+    // but UTF-8 should fail.
+    val prefix = "Hello".getBytes("UTF-8")
+    val truncated = prefix :+ 0xC3.toByte
+    // UTF-8 invalid, but all bytes are valid Windows-1252 → should still return true via fallback
+    FileContentValidator.isAllowedContent(stream(truncated)) should be(true)
+  }
+
   it should "terminate early when both checks fail without consuming the rest of the stream" in {
     // 0x81 fails Windows-1252. The Utf8Validator will also fail early once it
     // encounters it. The remainder is deliberately large to verify we don't read it.
