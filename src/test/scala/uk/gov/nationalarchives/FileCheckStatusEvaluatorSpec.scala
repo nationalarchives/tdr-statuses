@@ -9,7 +9,7 @@ import org.scalatest.wordspec.AsyncWordSpec
 import software.amazon.awssdk.services.sns.model.PublishResponse
 import uk.gov.nationalarchives.BackendCheckUtils.{File, FileCheckResults, Status}
 import uk.gov.nationalarchives.services._
-
+import uk.gov.nationalarchives.services.ResolutionPath._
 import java.util.UUID
 
 class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with Matchers with MockitoSugar {
@@ -91,14 +91,14 @@ class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with M
 
       when(mockGraphQl.getConsignmentDetails(any[File]))
         .thenReturn(IO.pure(details))
-      when(mockNotification.sendFileCheckFailureNotification(any[ConsignmentDetails]))
+      when(mockNotification.sendFileCheckFailureNotification(any[ConsignmentDetails], any[ResolutionPath]))
         .thenReturn(IO.pure(mockResponse))
 
       val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
       val statuses = List(Status(consignmentId, "Consignment", "ServerAntivirus", "Failed"))
       eval.processAndNotify(file, statuses).asserting { result =>
         verify(mockGraphQl).getConsignmentDetails(file)
-        verify(mockNotification).sendFileCheckFailureNotification(details)
+        verify(mockNotification).sendFileCheckFailureNotification(org.mockito.ArgumentMatchers.eq(details), any[ResolutionPath])
         result shouldBe Some(mockResponse)
       }
     }
@@ -128,6 +128,79 @@ class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with M
         verifyZeroInteractions(mockGraphQl)
         verifyZeroInteractions(mockNotification)
         result shouldBe None
+      }
+    }
+
+    "send notification with TNASupport resolution path when all failing statuses are TNA-fixable" in {
+      val mockGraphQl = mock[GraphQlApiService]
+      val mockNotification = mock[NotificationService]
+      val mockResponse = PublishResponse.builder().messageId("msg-tna").build()
+
+      when(mockGraphQl.getConsignmentDetails(any[File]))
+        .thenReturn(IO.pure(details))
+      when(mockNotification.sendFileCheckFailureNotification(any[ConsignmentDetails], any[ResolutionPath]))
+        .thenReturn(IO.pure(mockResponse))
+
+      val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
+      val statuses = List(
+        Status(consignmentId, "Consignment", "ServerAntivirus", "InProgress"),
+        Status(consignmentId, "File", "Antivirus", "VirusDetected")
+      )
+      eval.processAndNotify(file, statuses).asserting { _ =>
+        verify(mockNotification).sendFileCheckFailureNotification(
+          any[ConsignmentDetails],
+          org.mockito.ArgumentMatchers.eq(TNASupport)
+        )
+        succeed
+      }
+    }
+
+    "send notification with UserFixable resolution path when all failing statuses are user-fixable" in {
+      val mockGraphQl = mock[GraphQlApiService]
+      val mockNotification = mock[NotificationService]
+      val mockResponse = PublishResponse.builder().messageId("msg-user").build()
+
+      when(mockGraphQl.getConsignmentDetails(any[File]))
+        .thenReturn(IO.pure(details))
+      when(mockNotification.sendFileCheckFailureNotification(any[ConsignmentDetails], any[ResolutionPath]))
+        .thenReturn(IO.pure(mockResponse))
+
+      val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
+      val statuses = List(
+        Status(consignmentId, "Consignment", "ServerAntivirus", "InProgress"),
+        Status(consignmentId, "File", "FFID", "NonJudgmentFormat")
+      )
+      eval.processAndNotify(file, statuses).asserting { _ =>
+        verify(mockNotification).sendFileCheckFailureNotification(
+          any[ConsignmentDetails],
+          org.mockito.ArgumentMatchers.eq(UserFixable)
+        )
+        succeed
+      }
+    }
+
+    "send notification with UserFixableAndTNASupport resolution path when statuses require both" in {
+      val mockGraphQl = mock[GraphQlApiService]
+      val mockNotification = mock[NotificationService]
+      val mockResponse = PublishResponse.builder().messageId("msg-both").build()
+
+      when(mockGraphQl.getConsignmentDetails(any[File]))
+        .thenReturn(IO.pure(details))
+      when(mockNotification.sendFileCheckFailureNotification(any[ConsignmentDetails], any[ResolutionPath]))
+        .thenReturn(IO.pure(mockResponse))
+
+      val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
+      val statuses = List(
+        Status(consignmentId, "Consignment", "ServerAntivirus", "InProgress"),
+        Status(consignmentId, "File", "FFID", "NonJudgmentFormat"),
+        Status(consignmentId, "File", "Antivirus", "VirusDetected")
+      )
+      eval.processAndNotify(file, statuses).asserting { _ =>
+        verify(mockNotification).sendFileCheckFailureNotification(
+          any[ConsignmentDetails],
+          org.mockito.ArgumentMatchers.eq(UserFixableAndTNASupport)
+        )
+        succeed
       }
     }
   }
