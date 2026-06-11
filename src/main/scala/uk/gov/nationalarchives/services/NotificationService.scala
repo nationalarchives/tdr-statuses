@@ -11,7 +11,7 @@ import java.util.UUID
 
 class NotificationService(snsUtils: SNSUtils, topicArn: String, environment: String) {
 
-  def sendFileCheckFailureNotification(details: ConsignmentDetails, resolutionPath: String): IO[PublishResponse] = {
+  def sendFileCheckFailureNotification(details: ConsignmentDetails, resolutionPath: ResolutionPath): IO[PublishResponse] = {
     val event = FileCheckFailureEvent(
       consignmentType = details.consignmentType,
       consignmentReference = details.consignmentReference,
@@ -19,7 +19,7 @@ class NotificationService(snsUtils: SNSUtils, topicArn: String, environment: Str
       transferringBodyName = details.transferringBody.getOrElse("Unknown"),
       userId = details.userId,
       environment = environment,
-      resolutionPath = resolutionPath
+      resolutionPath = resolutionPath.id
     )
 
     IO(snsUtils.publish(event.asJson.noSpaces, topicArn))

@@ -4,7 +4,8 @@ import cats.effect.IO
 import software.amazon.awssdk.services.sns.model.PublishResponse
 import uk.gov.nationalarchives.BackendCheckUtils.{File, Status}
 import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusActions
-import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusActions.{TNASupport, UserFixable}
+import uk.gov.nationalarchives.services.ResolutionPath._
+import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusActions.{TNASupport => ActionTNASupport, UserFixable => ActionUserFixable}
 import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusTypes._
 import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusValues._
 
@@ -21,12 +22,12 @@ class FileCheckStatusEvaluator(
       for {
         details  <- graphQlApiService.getConsignmentDetails(result)
         statusesToAction = statuses.flatMap(status => StatusActions.action(toStatusType(status.statusName), StatusValue(status.statusValue)))
-        hasUserFixable   = statusesToAction.exists(_.actionType == UserFixable)
-        hasTNASupport    = statusesToAction.exists(_.actionType == TNASupport)
+        hasUserFixable   = statusesToAction.exists(_.actionType == ActionUserFixable)
+        hasTNASupport    = statusesToAction.exists(_.actionType == ActionTNASupport)
         resolutionPath   = (hasUserFixable, hasTNASupport) match {
-                             case (true, true)  => "UserFixableAndTNASupport"
-                             case (true, false) => "UserFixable"
-                             case _             => "TNASupport"
+                             case (true, true)  => UserFixableAndTNASupport
+                             case (true, false) => UserFixable
+                             case _             => TNASupport
                            }
         response <- notificationService.sendFileCheckFailureNotification(details, resolutionPath)
       } yield Some(response)
