@@ -6,6 +6,7 @@ import uk.gov.nationalarchives.BackendCheckUtils.{File, Status}
 import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusActions
 import uk.gov.nationalarchives.services.ResolutionPath._
 import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusActions.{TNASupport => ActionTNASupport, UserFixable => ActionUserFixable}
+import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusScopes._
 import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusTypes._
 import uk.gov.nationalarchives.tdr.common.utils.statuses.StatusValues._
 
@@ -15,13 +16,13 @@ class FileCheckStatusEvaluator(
 ) {
 
   def shouldSendFailureNotification(statuses: List[Status]): Boolean =
-    statuses.exists(s => s.statusType == "Consignment" && s.statusValue != "Completed")
+    statuses.exists(s => s.statusType == ConsignmentScope.value && s.statusValue != CompletedValue.value)
 
   def processAndNotify(result: File, statuses: List[Status]): IO[Option[PublishResponse]] = {
     if (shouldSendFailureNotification(statuses)) {
       for {
         details  <- graphQlApiService.getConsignmentDetails(result)
-        statusesToAction = statuses.flatMap(status => StatusActions.action(toStatusType(status.statusName), StatusValue(status.statusValue)))
+        statusesToAction = statuses.filterNot(_.statusType == ConsignmentScope.value).flatMap(status => StatusActions.action(toStatusType(status.statusName), StatusValue(status.statusValue)))
         hasUserFixable   = statusesToAction.exists(_.actionType == ActionUserFixable)
         hasTNASupport    = statusesToAction.exists(_.actionType == ActionTNASupport)
         resolutionPath   = (hasUserFixable, hasTNASupport) match {
