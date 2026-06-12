@@ -131,6 +131,30 @@ class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with M
       }
     }
 
+    "default to TNASupport resolution path when only Consignment statuses are present (filtered from statusesToAction)" in {
+      val mockGraphQl = mock[GraphQlApiService]
+      val mockNotification = mock[NotificationService]
+      val mockResponse = PublishResponse.builder().messageId("msg-consignment-only").build()
+
+      when(mockGraphQl.getConsignmentDetails(any[File]))
+        .thenReturn(IO.pure(details))
+      when(mockNotification.sendFileCheckFailureNotification(any[ConsignmentDetails], any[ResolutionPath]))
+        .thenReturn(IO.pure(mockResponse))
+
+      val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
+      val statuses = List(
+        Status(consignmentId, "Consignment", "ServerAntivirus", "Failed"),
+        Status(consignmentId, "Consignment", "ServerChecksum", "CompletedWithIssues")
+      )
+      eval.processAndNotify(file, statuses).asserting { _ =>
+        verify(mockNotification).sendFileCheckFailureNotification(
+          any[ConsignmentDetails],
+          org.mockito.ArgumentMatchers.eq(TNASupport)
+        )
+        succeed
+      }
+    }
+
     "send notification with TNASupport resolution path when all failing statuses are TNA-fixable" in {
       val mockGraphQl = mock[GraphQlApiService]
       val mockNotification = mock[NotificationService]
