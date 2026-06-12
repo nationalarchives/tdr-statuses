@@ -26,7 +26,6 @@ object Dependencies {
   lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.477"
   lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.291"
   lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.9"
-  lazy val utf8Validator = "uk.gov.nationalarchives" % "utf8-validator" % "1.2"
   lazy val tdrStatuses = "uk.gov.nationalarchives" %% "tdr-statuses" % "0.0.30"
   lazy val catsEffectTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.8.0"
   lazy val log4cats = "org.typelevel" %% "log4cats-slf4j" % "2.8.0"
