@@ -6,12 +6,12 @@ sealed trait ResolutionPath {
 
 object ResolutionPath {
   case object UserFixable extends ResolutionPath {
-    val id: String = "UserFixable"
+    val id: String = "User Fixable"
   }
   case object TNASupport extends ResolutionPath {
-    val id: String = "TNASupport"
+    val id: String = "TNA Support"
   }
   case object UserFixableAndTNASupport extends ResolutionPath {
-    val id: String = "UserFixableAndTNASupport"
+    val id: String = "User Fixable And TNA Support"
   }
 }
