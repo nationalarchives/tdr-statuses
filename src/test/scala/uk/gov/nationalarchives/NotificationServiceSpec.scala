@@ -53,7 +53,7 @@ class NotificationServiceSpec extends AsyncWordSpec with AsyncIOSpec with Matche
         parsed.transferringBodyName shouldBe "Test Body"
         parsed.userId shouldBe userId
         parsed.environment shouldBe "integration"
-        parsed.resolutionPath shouldBe "TNASupport"
+        parsed.resolutionPath shouldBe "TNA Support"
       }
     }
 
