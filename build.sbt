@@ -22,6 +22,7 @@ lazy val root = (project in file("."))
       generatedGraphql,
       authUtils,
       typesafeConfig,
+      utf8Validator,
       tdrStatuses,
       log4cats,
       slf4jSimple,
