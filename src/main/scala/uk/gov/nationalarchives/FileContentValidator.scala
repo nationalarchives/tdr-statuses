@@ -34,9 +34,8 @@ object FileContentValidator {
   def isAllowedContent(inputStream: InputStream): Boolean = {
     val trackingStream = new Windows1252TrackingInputStream(inputStream)
     val isUtf8Valid = validateUtf8(trackingStream)
-
-    if (!isUtf8Valid && trackingStream.isWindows1252Valid) {
-      drainForWindows1252Validation(trackingStream)
+    if (!isUtf8Valid) {
+      drainStream(trackingStream)
     }
 
     !trackingStream.isStreamEmpty && (isUtf8Valid || trackingStream.isWindows1252Valid)
@@ -48,7 +47,7 @@ object FileContentValidator {
     Try(new Utf8Validator(validationHandler).validate(stream)).isSuccess
   }
 
-  private def drainForWindows1252Validation(stream: Windows1252TrackingInputStream): Unit = {
+  private def drainStream(stream: Windows1252TrackingInputStream): Unit = {
     val buffer = new Array[Byte](DrainBufferSize)
     while (stream.isWindows1252Valid && stream.read(buffer) != -1) {}
   }
