@@ -106,6 +106,16 @@ The lambda processes the following file statuses for each file.
 * If any FFID file status is set to a status from the `DisallowedPuids` table where `Active` is true, or has `MultipleFormats`, then `CompletedWithIssues`.
 * If any FFID file status is `Failed`, then `Failed`.
 
+## File Check Error Information
+
+After evaluating file statuses, the lambda writes error information objects to the `tdr-transfer-errors-<environment>` S3 bucket for any file that has one or more file-level statuses that are not `Success` or `Completed`.
+
+Each error object is written to the key `<consignmentId>/filechecks/<fileId>.error` and contains:
+- `file` — the full file object (including `consignmentId`, `fileId`, `originalPath`, etc.)
+- `statuses` — the list of non-success/non-completed statuses for that file (each with `id`, `statusType`, `statusName`, `statusValue`)
+
+Files referenced by a status but not present in the input results are skipped with a warning.
+
 ## Adding a new status
 * Add a method into `StatusProcessor`. This should return `IO[List[Status]]`
 * Call this new method in the `statusChecks` method in the `Lambda` class and return the result in the `yield` block.
