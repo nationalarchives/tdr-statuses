@@ -29,12 +29,19 @@ object FileContentValidator {
    * If it fails, the tracked Windows-1252 result is used as fallback.
    *
    * Returns false for an empty stream.
+   * Throws an IOException if the stream ends before expectedSize bytes are read.
    */
-  def isAllowedContent(inputStream: InputStream): Boolean = {
-    val trackingStream = new Windows1252TrackingInputStream(inputStream)
+  def isAllowedContent(inputStream: InputStream, expectedSize: Long = -1L): Boolean = {
+    val trackingStream = new Windows1252TrackingInputStream(inputStream, expectedSize)
     val isUtf8Valid = validateUtf8(trackingStream)
     if (!isUtf8Valid) {
       drainStream(trackingStream)
+    }
+
+    if (trackingStream.isPrematureEof) {
+      throw new java.io.IOException(
+        s"Stream ended prematurely: read ${trackingStream.totalBytesRead} bytes but expected $expectedSize"
+      )
     }
 
     !trackingStream.isStreamEmpty && (isUtf8Valid || trackingStream.isWindows1252Valid)
@@ -82,14 +89,18 @@ object FileContentValidator {
    * Wraps an [[InputStream]], tracking Windows-1252 validity for every byte
    * read without buffering. Delegates all reading to the underlying stream.
    */
-  private final class Windows1252TrackingInputStream(delegate: InputStream) extends InputStream {
+  private final class Windows1252TrackingInputStream(delegate: InputStream, expectedSize: Long = -1L) extends InputStream {
     var isWindows1252Valid: Boolean = true
     var isStreamEmpty: Boolean = true
+    var totalBytesRead: Long = 0L
     private val buffered = new BufferedInputStream(delegate, StreamBufferSize)
+
+    def isPrematureEof: Boolean = expectedSize > 0 && totalBytesRead < expectedSize
 
     private def trackSingleByte(nextByte: Int): Unit =
       if (nextByte != -1) {
         isStreamEmpty = false
+        totalBytesRead += 1
         if (!isValidWindows1252Byte(nextByte.toByte)) isWindows1252Valid = false
       }
 
@@ -101,6 +112,7 @@ object FileContentValidator {
         index += 1
       }
       isStreamEmpty = false
+      totalBytesRead += bytesRead
     }
 
     override def available(): Int = buffered.available()

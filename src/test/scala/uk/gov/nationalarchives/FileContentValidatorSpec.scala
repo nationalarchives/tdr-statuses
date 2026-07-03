@@ -85,4 +85,27 @@ class FileContentValidatorSpec extends AnyFlatSpec {
     // not the multi-megabyte trailing payload.
     bytesRead should be < trailingSize
   }
+
+  it should "throw IOException when stream ends before expectedSize is reached" in {
+    val content = "Hello".getBytes("UTF-8") // 5 bytes
+    val expectedSize = 1000L // claim the file should be 1000 bytes
+    val exception = intercept[java.io.IOException] {
+      FileContentValidator.isAllowedContent(stream(content), expectedSize)
+    }
+    exception.getMessage should include("prematurely")
+    exception.getMessage should include("5")
+    exception.getMessage should include("1000")
+  }
+
+  it should "not throw when stream delivers all expected bytes" in {
+    val content = "Hello café".getBytes("UTF-8")
+    val expectedSize = content.length.toLong
+    FileContentValidator.isAllowedContent(stream(content), expectedSize) should be(true)
+  }
+
+  it should "not throw when expectedSize is not provided" in {
+    val content = "Hello".getBytes("UTF-8")
+    // Default expectedSize = -1L means no check
+    FileContentValidator.isAllowedContent(stream(content)) should be(true)
+  }
 }

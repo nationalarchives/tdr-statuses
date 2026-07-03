@@ -3,13 +3,20 @@ package uk.gov.nationalarchives
 import cats.effect.{IO, Resource}
 import cats.implicits._
 import cats.effect.implicits._
+
 import java.util.concurrent.ConcurrentHashMap
+import scala.concurrent.duration._
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import uk.gov.nationalarchives.BackendCheckUtils.{File, Input, Status}
 import uk.gov.nationalarchives.PuidJsonReader.AllPuidInformation
-import uk.gov.nationalarchives.aws.utils.s3.S3Clients.s3Async
 import uk.gov.nationalarchives.aws.utils.s3.S3Utils
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.s3.S3AsyncClient
+
+import java.net.URI
+import java.time.Duration
 import _root_.uk.gov.nationalarchives.tdr.common.utils.statuses.StatusValues._
 import _root_.uk.gov.nationalarchives.tdr.common.utils.statuses.StatusTypes._
 import _root_.uk.gov.nationalarchives.tdr.common.utils.statuses.StatusScopes._
@@ -22,21 +29,29 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
     new ConcurrentHashMap[String, Option[Boolean]]()
 
   private def validateFileContent(file: File): IO[Option[Boolean]] = {
-    def readFromS3(bucket: String, key: String): IO[Option[Boolean]] =
+    def readFromS3(bucket: String, key: String, expectedSize: Long): IO[Option[Boolean]] =
       Resource
         .fromAutoCloseable(IO.blocking(s3Utils.getObjectAsStreamingInputStream(bucket, key)))
-        .use(is => IO.blocking(FileContentValidator.isAllowedContent(is)))
+        .use(is => IO.blocking(FileContentValidator.isAllowedContent(is, expectedSize)))
         .map(Some(_))
-        .handleErrorWith { err =>
+
+    def readWithRetry(bucket: String, key: String, expectedSize: Long, retries: Int = 2): IO[Option[Boolean]] =
+      readFromS3(bucket, key, expectedSize).handleErrorWith {
+        case err: java.io.IOException if retries > 0 && err.getMessage.contains("prematurely") =>
+          Logger[IO].warn(s"Premature EOF reading s3://$bucket/$key for fileId=${file.fileId}, retrying ($retries left)") >>
+            IO.sleep(500.millis) >>
+            readWithRetry(bucket, key, expectedSize, retries - 1)
+        case err =>
           Logger[IO].error(s"Failed to validate file from s3://$bucket/$key for fileId=${file.fileId}: ${err.getMessage}").as(None)
-        }
+      }
 
     Option(fileUTF8ValidationCache.get(file.fileId.toString)) match {
       case Some(cached) => IO.pure(cached)
       case None =>
         (file.s3CleanDestinationBucket, file.s3CleanDestinationBucketKey) match {
           case (Some(bucket), Some(key)) =>
-            readFromS3(bucket, key).flatTap(result => IO(fileUTF8ValidationCache.put(file.fileId.toString, result)))
+            val expectedSize = file.fileSize.toLongOption.getOrElse(-1L)
+            readWithRetry(bucket, key, expectedSize).flatTap(result => IO(fileUTF8ValidationCache.put(file.fileId.toString, result)))
           case _ => IO.pure(None)
         }
     }
@@ -239,9 +254,23 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
 }
 
 object StatusProcessor {
-  private lazy val s3Utils: S3Utils = S3Utils(s3Async(sys.env("S3_ENDPOINT")))
+  private lazy val s3Utils: S3Utils = {
+   val httpClient = NettyNioAsyncHttpClient.builder()
+      .readTimeout(Duration.ofSeconds(60))
+      .maxConcurrency(300)
+      .connectionMaxIdleTime(Duration.ofSeconds(10))
+      .build()
+
+    val client = S3AsyncClient.builder()
+      .region(Region.EU_WEST_2)
+      .endpointOverride(URI.create(sys.env("S3_ENDPOINT")))
+      .httpClient(httpClient)
+      .build()
+
+    S3Utils(client)
+
+  }
 
   def apply(input: Input, allPuidInformation: AllPuidInformation): StatusProcessor =
     new StatusProcessor(input, allPuidInformation, s3Utils)
 }
-
