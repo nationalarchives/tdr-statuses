@@ -5,7 +5,7 @@ import cats.implicits._
 import cats.effect.implicits._
 
 import java.util.concurrent.ConcurrentHashMap
-import scala.concurrent.duration._
+import scala.concurrent.duration.DurationInt
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import uk.gov.nationalarchives.BackendCheckUtils.{File, Input, Status}
