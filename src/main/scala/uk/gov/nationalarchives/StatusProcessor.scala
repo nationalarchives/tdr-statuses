@@ -37,7 +37,7 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
 
     def readWithRetry(bucket: String, key: String, expectedSize: Long, retries: Int = 2): IO[Option[Boolean]] =
       readFromS3(bucket, key, expectedSize).handleErrorWith {
-        case err: java.io.IOException if retries > 0 && err.getMessage.contains("prematurely") =>
+        case err: java.io.IOException if retries > 0 && Option(err.getMessage).exists(_.startsWith("Stream ended prematurely:")) =>
           Logger[IO].warn(s"Premature EOF reading s3://$bucket/$key for fileId=${file.fileId}, retrying ($retries left)") >>
             IO.sleep(500.millis) >>
             readWithRetry(bucket, key, expectedSize, retries - 1)
