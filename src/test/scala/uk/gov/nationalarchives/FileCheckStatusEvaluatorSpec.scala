@@ -203,6 +203,31 @@ class FileCheckStatusEvaluatorSpec extends AsyncWordSpec with AsyncIOSpec with M
       }
     }
 
+    "send notification with UserFixable resolution path when all failing statuses are user-fixable (filtering out clientChecks)" in {
+      val mockGraphQl = mock[GraphQlApiService]
+      val mockNotification = mock[NotificationService]
+      val mockResponse = PublishResponse.builder().messageId("msg-user").build()
+
+      when(mockGraphQl.getConsignmentDetails(any[File]))
+        .thenReturn(IO.pure(details))
+      when(mockNotification.sendFileCheckFailureNotification(any[ConsignmentDetails], any[ResolutionPath]))
+        .thenReturn(IO.pure(mockResponse))
+
+      val eval = FileCheckStatusEvaluator(mockGraphQl, mockNotification)
+      val statuses = List(
+        Status(consignmentId, "Consignment", "ServerAntivirus", "InProgress"),
+        Status(consignmentId, "File", "FFID", "NonJudgmentFormat"),
+        Status(consignmentId, "File", "ClientChecks", "CompletedWithIssues"),
+      )
+      eval.processAndNotify(file, statuses).asserting { _ =>
+        verify(mockNotification).sendFileCheckFailureNotification(
+          any[ConsignmentDetails],
+          org.mockito.ArgumentMatchers.eq(UserFixable)
+        )
+        succeed
+      }
+    }
+
     "send notification with UserFixableAndTNASupport resolution path when statuses require both" in {
       val mockGraphQl = mock[GraphQlApiService]
       val mockNotification = mock[NotificationService]

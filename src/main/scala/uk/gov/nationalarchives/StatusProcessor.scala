@@ -73,7 +73,7 @@ class StatusProcessor(input: Input, allPuidInformation: AllPuidInformation, s3Ut
   }.pure[IO]
 
   def ffid(): IO[List[Status]] = {
-    input.results.parTraverseN(3) { result =>
+    input.results.parTraverseN(20) { result =>
       val fileFormat = result.fileCheckResults.fileFormat
       val allMatches = fileFormat.flatMap(_.matches)
       val puidMatches = allMatches.map(_.puid.getOrElse(""))

@@ -41,7 +41,9 @@ class TestUtils extends AnyFlatSpec with TableDrivenPropertyChecks with MockitoS
   val inactiveDisallowedStandardPuid = "fmt/002"
   val passwordProtectedPuid = "fmt/494"
 
-  def getInputFromS3(): Input = wiremockS3Server.getAllServeEvents.asScala.find(_.getRequest.getMethod == RequestMethod.PUT)
+  def getInputFromS3(): Input = wiremockS3Server.getAllServeEvents.asScala.find(ev =>
+    ev.getRequest.getMethod == RequestMethod.PUT && ev.getRequest.getUrl == "/testBucket/testKey"
+  )
     .flatMap(ev => {
       val bodyString = ev.getRequest.getBodyAsString.split("\r\n")(1)
       decode[Input](bodyString).toOption
