@@ -65,6 +65,12 @@ class FileContentValidatorSpec extends AnyFlatSpec {
     bytesRead should be < trailingSize
   }
 
+  it should "not throw premature EOF when validation intentionally stops early before EOF" in {
+    val totalSize = 10002
+    val bytes = Array[Byte](0x81.toByte) ++ new Array[Byte](totalSize - 1)
+    FileContentValidator.isAllowedContent(stream(bytes), totalSize.toLong) should be(false)
+  }
+
   it should "throw IOException when stream ends before expectedSize is reached" in {
     val content = "Hello".getBytes("UTF-8") // 5 bytes
     val expectedSize = 1000L // claim the file should be 1000 bytes

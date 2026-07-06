@@ -93,9 +93,10 @@ object FileContentValidator {
     var isWindows1252Valid: Boolean = true
     var isStreamEmpty: Boolean = true
     var totalBytesRead: Long = 0L
+    private var reachedEof: Boolean = false
     private val buffered = new BufferedInputStream(delegate, StreamBufferSize)
 
-    def isPrematureEof: Boolean = expectedSize > 0 && totalBytesRead < expectedSize
+    def isPrematureEof: Boolean = expectedSize > 0 && reachedEof && totalBytesRead < expectedSize
 
     private def trackSingleByte(nextByte: Int): Unit =
       if (nextByte != -1) {
@@ -119,13 +120,19 @@ object FileContentValidator {
 
     override def read(): Int = {
       val nextByte = buffered.read()
-      trackSingleByte(nextByte)
+      if (nextByte == -1) {
+        reachedEof = true
+      } else {
+        trackSingleByte(nextByte)
+      }
       nextByte
     }
 
     override def read(buffer: Array[Byte], offset: Int, length: Int): Int = {
       val bytesRead = buffered.read(buffer, offset, length)
-      if (bytesRead > 0) {
+      if (bytesRead == -1) {
+        reachedEof = true
+      } else if (bytesRead > 0) {
         trackBufferBytes(buffer, offset, bytesRead)
       }
       bytesRead
