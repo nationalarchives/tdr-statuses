@@ -1,9 +1,8 @@
 package uk.gov.nationalarchives
 
-import uk.gov.nationalarchives.utf8.validator.{Utf8Validator, ValidationException, ValidationHandler}
-
 import java.io.{BufferedInputStream, InputStream}
-import scala.util.Try
+import java.nio.{ByteBuffer, CharBuffer}
+import java.nio.charset.{CodingErrorAction, StandardCharsets}
 
 object FileContentValidator {
 
@@ -25,26 +24,60 @@ object FileContentValidator {
    * Validates file content from a stream with early termination.
    *
    * Wraps the stream in a [[Windows1252TrackingInputStream]] that checks each
-   * byte for Windows-1252 validity inline, then passes it to [[Utf8Validator]].
-   * If UTF-8 validation succeeds, the file is allowed. If it fails, the tracked
-   * Windows-1252 result is used as fallback.
+   * byte for Windows-1252 validity inline, then validates UTF-8 using a
+   * bulk-read CharsetDecoder. If UTF-8 validation succeeds, the file is allowed.
+   * If it fails, the tracked Windows-1252 result is used as fallback.
    *
    * Returns false for an empty stream.
+   * Throws an IOException if the stream ends before expectedSize bytes are read.
    */
-  def isAllowedContent(inputStream: InputStream): Boolean = {
-    val trackingStream = new Windows1252TrackingInputStream(inputStream)
+  def isAllowedContent(inputStream: InputStream, expectedSize: Long = -1L): Boolean = {
+    val trackingStream = new Windows1252TrackingInputStream(inputStream, expectedSize)
     val isUtf8Valid = validateUtf8(trackingStream)
     if (!isUtf8Valid) {
       drainStream(trackingStream)
     }
 
+    if (trackingStream.isPrematureEof) {
+      throw new java.io.IOException(
+        s"Stream ended prematurely: read ${trackingStream.totalBytesRead} bytes but expected $expectedSize"
+      )
+    }
+
     !trackingStream.isStreamEmpty && (isUtf8Valid || trackingStream.isWindows1252Valid)
   }
 
+  private val Utf8ReadBufferSize = 8192
+
   private def validateUtf8(stream: InputStream): Boolean = {
-    val validationHandler: ValidationHandler = (message: String, byteOffset: Long) =>
-      throw new ValidationException(message, byteOffset)
-    Try(new Utf8Validator(validationHandler).validate(stream)).isSuccess
+    val decoder = StandardCharsets.UTF_8.newDecoder()
+      .onMalformedInput(CodingErrorAction.REPORT)
+      .onUnmappableCharacter(CodingErrorAction.REPORT)
+    val buffer = new Array[Byte](Utf8ReadBufferSize)
+    val charBuf = CharBuffer.allocate(Utf8ReadBufferSize)
+    // Tracks how many leftover bytes from an incomplete multi-byte sequence
+    // remain at the start of the buffer from the previous read.
+    var leftover = 0
+    var bytesRead = stream.read(buffer, 0, buffer.length)
+    while (bytesRead != -1) {
+      val total = leftover + bytesRead
+      val bb = ByteBuffer.wrap(buffer, 0, total)
+      val result = decoder.decode(bb, charBuf, false)
+      if (result.isError) return false
+      charBuf.clear()
+      // Carry over any unconsumed bytes (incomplete multi-byte sequence at end)
+      leftover = bb.remaining()
+      if (leftover > 0) {
+        System.arraycopy(buffer, bb.position(), buffer, 0, leftover)
+      }
+      bytesRead = stream.read(buffer, leftover, buffer.length - leftover)
+    }
+    // Signal end-of-input — any remaining incomplete sequence is an error
+    val bb = ByteBuffer.wrap(buffer, 0, leftover)
+    val endResult = decoder.decode(bb, charBuf, true)
+    if (endResult.isError) return false
+    val flushResult = decoder.flush(charBuf)
+    !flushResult.isError
   }
 
   private def drainStream(stream: Windows1252TrackingInputStream): Unit = {
@@ -56,14 +89,19 @@ object FileContentValidator {
    * Wraps an [[InputStream]], tracking Windows-1252 validity for every byte
    * read without buffering. Delegates all reading to the underlying stream.
    */
-  private final class Windows1252TrackingInputStream(delegate: InputStream) extends InputStream {
+  private final class Windows1252TrackingInputStream(delegate: InputStream, expectedSize: Long = -1L) extends InputStream {
     var isWindows1252Valid: Boolean = true
     var isStreamEmpty: Boolean = true
+    var totalBytesRead: Long = 0L
+    private var reachedEof: Boolean = false
     private val buffered = new BufferedInputStream(delegate, StreamBufferSize)
+
+    def isPrematureEof: Boolean = expectedSize > 0 && reachedEof && totalBytesRead < expectedSize
 
     private def trackSingleByte(nextByte: Int): Unit =
       if (nextByte != -1) {
         isStreamEmpty = false
+        totalBytesRead += 1
         if (!isValidWindows1252Byte(nextByte.toByte)) isWindows1252Valid = false
       }
 
@@ -75,19 +113,26 @@ object FileContentValidator {
         index += 1
       }
       isStreamEmpty = false
+      totalBytesRead += bytesRead
     }
 
     override def available(): Int = buffered.available()
 
     override def read(): Int = {
       val nextByte = buffered.read()
-      trackSingleByte(nextByte)
+      if (nextByte == -1) {
+        reachedEof = true
+      } else {
+        trackSingleByte(nextByte)
+      }
       nextByte
     }
 
     override def read(buffer: Array[Byte], offset: Int, length: Int): Int = {
       val bytesRead = buffered.read(buffer, offset, length)
-      if (bytesRead > 0) {
+      if (bytesRead == -1) {
+        reachedEof = true
+      } else if (bytesRead > 0) {
         trackBufferBytes(buffer, offset, bytesRead)
       }
       bytesRead
