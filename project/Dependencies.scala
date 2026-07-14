@@ -4,13 +4,14 @@ object Dependencies {
   private val circeVersion = "0.14.15"
 
   private val testContainersVersion = "0.44.1"
-  private val awsVersion = "2.44.14"
+  private val awsVersion = "2.46.5"
   private val doobieVersion = "1.0.0-RC11"
 
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
   lazy val snsUtils = "uk.gov.nationalarchives" %% "sns-utils" % "0.1.332"
-  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.216"
+  lazy val s3Utils = "uk.gov.nationalarchives" %% "s3-utils" % "0.1.332"
+  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.220"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
   lazy val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
@@ -19,11 +20,15 @@ object Dependencies {
   lazy val testContainersPostgres = "com.dimafeng" %% "testcontainers-scala-postgresql" % testContainersVersion
   lazy val mockito = "org.mockito" %% "mockito-scala" % "2.2.1"
   lazy val wiremock = "com.github.tomakehurst" % "wiremock" % "3.0.1"
-  lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.133"
+  lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.136"
   lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.7.0"
-  lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.302"
-  lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.477"
-  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.291"
+  lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.304"
+  lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.478"
+  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.292"
   lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.9"
+  lazy val tdrStatuses = "uk.gov.nationalarchives" %% "tdr-statuses" % "0.0.36"
+  lazy val objectKeyContext = "uk.gov.nationalarchives" %% "tdr-object-key-context" % "0.0.36"
   lazy val catsEffectTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.8.0"
+  lazy val log4cats = "org.typelevel" %% "log4cats-slf4j" % "2.8.0"
+  lazy val slf4jSimple = "org.slf4j" % "slf4j-simple" % "2.0.18"
 }

@@ -20,13 +20,12 @@ class Lambda(fileCheckStatusEvaluator: => FileCheckStatusEvaluator) {
   def this() = this(Lambda.defaultEvaluator)
 
   private val backendChecksUtils = BackendCheckUtils(sys.env("S3_ENDPOINT"))
+  private val fileCheckErrorWriter = new FileCheckErrorInformationWriter(sys.env("S3_ENDPOINT"), sys.env("ENVIRONMENT"))
 
-  private def statusProcessor(input: Input): IO[StatusProcessor[IO]] = for {
-    allPuids <- PuidJsonReader().allPuids
-    processor <- StatusProcessor[IO](input, allPuids)
-  } yield processor
+  private def statusProcessor(input: Input): IO[StatusProcessor] =
+    PuidJsonReader().allPuids.map(allPuids => StatusProcessor(input, allPuids))
 
-  private def statusChecks(processor: StatusProcessor[IO]): IO[List[Status]] = for {
+  private def statusChecks(processor: StatusProcessor): IO[List[Status]] = for {
     ffid <- processor.ffid()
     av <- processor.antivirus()
     checksumMatch <- processor.checksumMatch()
@@ -52,6 +51,7 @@ class Lambda(fileCheckStatusEvaluator: => FileCheckStatusEvaluator) {
       statuses <- statusChecks(processor)
       resultString = Input(input.results, input.redactedResults, StatusResult(statuses)).asJson.printWith(Printer.noSpaces)
       _ <- IO.fromEither(backendChecksUtils.writeResultJson(s3Input.key, s3Input.bucket, resultString))
+      _ <- fileCheckErrorWriter.writeFileCheckErrors(input, statuses)
       _ <- input.results.headOption match {
         case Some(result) => fileCheckStatusEvaluator.processAndNotify(result, statuses).void
         case None         => IO.unit
@@ -73,4 +73,3 @@ object Lambda {
   private lazy val defaultEvaluator: FileCheckStatusEvaluator =
     FileCheckStatusEvaluator(GraphQlApiService.service, notificationService)
 }
-

@@ -6,11 +6,12 @@ ThisBuild / organization     := "uk.gov.nationalarchives"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "tdr-statuses",
+    name := "tdr-statuses-lambda",
     libraryDependencies ++= Seq(
       awsS3,
       awsSsm,
       snsUtils,
+      s3Utils,
       backendCheckUtils,
       circeCore,
       circeParser,
@@ -21,6 +22,10 @@ lazy val root = (project in file("."))
       generatedGraphql,
       authUtils,
       typesafeConfig,
+      tdrStatuses,
+      objectKeyContext,
+      log4cats,
+      slf4jSimple,
       mockito % Test,
       scalaTest % Test,
       wiremock % Test,
@@ -30,10 +35,16 @@ lazy val root = (project in file("."))
   )
 
 (assembly / assemblyMergeStrategy) := {
-  case PathList("META-INF", xs@_*) => MergeStrategy.discard
+  case PathList("META-INF", "services", _*) => MergeStrategy.concat
+  case PathList("META-INF", _*) => MergeStrategy.discard
   case _ => MergeStrategy.first
 }
 
 Test / fork := true
 (Test / fork) := true
-(Test / envVars) := Map("AWS_ACCESS_KEY_ID" -> "test", "AWS_SECRET_ACCESS_KEY" -> "test", "S3_ENDPOINT" -> "http://localhost:9005")
+(Test / envVars) := Map(
+  "AWS_ACCESS_KEY_ID" -> "test",
+  "AWS_SECRET_ACCESS_KEY" -> "test",
+  "S3_ENDPOINT" -> "http://localhost:9005",
+  "ENVIRONMENT" -> "test"
+)
