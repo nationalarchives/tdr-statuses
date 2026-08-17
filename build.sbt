@@ -8,6 +8,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "tdr-statuses-lambda",
     libraryDependencies ++= Seq(
+      awsApacheClient,
       awsS3,
       awsSsm,
       snsUtils,
