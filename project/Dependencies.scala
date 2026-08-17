@@ -7,6 +7,7 @@ object Dependencies {
   private val awsVersion = "2.53.1"
   private val doobieVersion = "1.0.0-RC11"
 
+  lazy val awsApacheClient = "software.amazon.awssdk" % "apache-client" % awsVersion
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
   lazy val snsUtils = "uk.gov.nationalarchives" %% "sns-utils" % "0.1.339"
