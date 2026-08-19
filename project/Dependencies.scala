@@ -25,7 +25,7 @@ object Dependencies {
   lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.7.0"
   lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.305"
   lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.484"
-  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.297"
+  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.298"
   lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.9"
   lazy val tdrStatuses = "uk.gov.nationalarchives" %% "tdr-statuses" % "0.0.48"
   lazy val objectKeyContext = "uk.gov.nationalarchives" %% "tdr-object-key-context" % "0.0.48"
