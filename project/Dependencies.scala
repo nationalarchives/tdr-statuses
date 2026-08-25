@@ -12,7 +12,7 @@ object Dependencies {
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
   lazy val snsUtils = "uk.gov.nationalarchives" %% "sns-utils" % "0.1.339"
   lazy val s3Utils = "uk.gov.nationalarchives" %% "s3-utils" % "0.1.339"
-  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.241"
+  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.243"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
   lazy val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
