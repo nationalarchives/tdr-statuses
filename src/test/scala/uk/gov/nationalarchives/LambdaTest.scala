@@ -143,7 +143,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
   "run" should "return the correct redacted statuses for redacted files" in {
     val input = decode[Input](Source.fromResource("input.json").mkString).toOption.get
-    val filePair = RedactedFilePairs(UUID.randomUUID(), "original", UUID.randomUUID(), "redacted")
+    val filePair = RedactedFilePairs(Some(UUID.randomUUID()), "original", UUID.randomUUID(), "redacted")
     val errors = RedactedErrors(UUID.randomUUID(), "TestFailureReason")
     val redactedResults = input.redactedResults
       .copy(redactedFiles = filePair :: Nil, errors = errors :: Nil)
@@ -159,7 +159,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     redactionStatuses.count(_.statusValue == Success) should equal(1)
     redactionStatuses.count(_.statusValue == "TestFailureReason") should equal(1)
   }
-  val redactedFilePairs = RedactedFilePairs(UUID.randomUUID(), "originalFilePath", UUID.randomUUID(), "redactedFilePath")
+  val redactedFilePairs = RedactedFilePairs(Some(UUID.randomUUID()), "originalFilePath", UUID.randomUUID(), "redactedFilePath")
 
   forAll(serverFFIDResults)((puids, expectedResult) => {
     "run" should s"return the expected consignment status $expectedResult for puids ${puids.mkString(" ")}" in {
