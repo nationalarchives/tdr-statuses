@@ -143,7 +143,7 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
 
   "run" should "return the correct redacted statuses for redacted files" in {
     val input = decode[Input](Source.fromResource("input.json").mkString).toOption.get
-    val filePair = RedactedFilePairs(UUID.randomUUID(), "original", UUID.randomUUID(), "redacted")
+    val filePair = RedactedFilePairs(Some(UUID.randomUUID()), "original", UUID.randomUUID(), "redacted")
     val errors = RedactedErrors(UUID.randomUUID(), "TestFailureReason")
     val redactedResults = input.redactedResults
       .copy(redactedFiles = filePair :: Nil, errors = errors :: Nil)
@@ -159,7 +159,23 @@ class LambdaTest extends TestUtils with BeforeAndAfterAll {
     redactionStatuses.count(_.statusValue == Success) should equal(1)
     redactionStatuses.count(_.statusValue == "TestFailureReason") should equal(1)
   }
-  val redactedFilePairs = RedactedFilePairs(UUID.randomUUID(), "originalFilePath", UUID.randomUUID(), "redactedFilePath")
+
+  "run" should "return a success redaction status for a redacted file with a None originalFileId" in {
+    val input = decode[Input](Source.fromResource("input.json").mkString).toOption.get
+    val filePair = RedactedFilePairs(None, "original", UUID.randomUUID(), "redacted")
+    val redactedResults = input.redactedResults.copy(redactedFiles = filePair :: Nil, errors = Nil)
+    val inputString = input.copy(redactedResults = redactedResults).asJson.printWith(Printer.noSpaces)
+    val s3Input = putJsonFile(S3Input("testKey", "testBucket"), inputString).asJson.printWith(noSpaces)
+
+    new Lambda(FileCheckStatusEvaluator.noOp).run(new ByteArrayInputStream(s3Input.getBytes()), new ByteArrayOutputStream())
+
+    val result = getInputFromS3().statuses
+    val redactionStatuses = result.statuses.filter(_.statusName == "Redaction")
+    redactionStatuses.size should equal(1)
+    redactionStatuses.head.statusValue should equal(Success)
+    redactionStatuses.head.id should equal(filePair.redactedFileId)
+  }
+  val redactedFilePairs = RedactedFilePairs(Some(UUID.randomUUID()), "originalFilePath", UUID.randomUUID(), "redactedFilePath")
 
   forAll(serverFFIDResults)((puids, expectedResult) => {
     "run" should s"return the expected consignment status $expectedResult for puids ${puids.mkString(" ")}" in {
