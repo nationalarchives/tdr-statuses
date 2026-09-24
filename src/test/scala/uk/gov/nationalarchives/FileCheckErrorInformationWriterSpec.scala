@@ -1,6 +1,7 @@
 package uk.gov.nationalarchives
 
 import cats.effect.unsafe.implicits.global
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import org.scalatest.BeforeAndAfterAll
@@ -13,7 +14,9 @@ import scala.jdk.CollectionConverters._
 class FileCheckErrorInformationWriterSpec extends TestUtils with BeforeAndAfterAll {
 
   private val environment = "test"
-  private val writer = new FileCheckErrorInformationWriter(sys.env("S3_ENDPOINT"), environment)
+  override val wiremockS3Server = new com.github.tomakehurst.wiremock.WireMockServer(wireMockConfig().dynamicPort())
+
+  private def writer = new FileCheckErrorInformationWriter(wiremockS3Server.baseUrl(), environment)
 
   override def beforeAll(): Unit = {
     wiremockS3Server.start()
