@@ -31,5 +31,5 @@ object Dependencies {
   lazy val objectKeyContext = "uk.gov.nationalarchives" %% "tdr-object-key-context" % "0.0.48"
   lazy val catsEffectTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.8.0"
   lazy val log4cats = "org.typelevel" %% "log4cats-slf4j" % "2.8.0"
-  lazy val slf4jSimple = "org.slf4j" % "slf4j-simple" % "2.0.18"
+  lazy val slf4jSimple = "org.slf4j" % "slf4j-simple" % "2.0.20"
 }
