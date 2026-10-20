@@ -42,6 +42,7 @@ lazy val root = (project in file("."))
 }
 
 Test / fork := true
+(Test / parallelExecution) := false
 (Test / fork) := true
 (Test / envVars) := Map(
   "AWS_ACCESS_KEY_ID" -> "test",
