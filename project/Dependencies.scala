@@ -21,7 +21,7 @@ object Dependencies {
   lazy val testContainersPostgres = "com.dimafeng" %% "testcontainers-scala-postgresql" % testContainersVersion
   lazy val mockito = "org.mockito" %% "mockito-scala" % "2.2.3"
   lazy val wiremock = "com.github.tomakehurst" % "wiremock" % "3.0.1"
-  lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.144"
+  lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.152"
   lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.7.1"
   lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.307"
   lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.486"
