@@ -4,7 +4,7 @@ object Dependencies {
   private val circeVersion = "0.14.17"
 
   private val testContainersVersion = "0.44.1"
-  private val awsVersion = "2.57.2"
+  private val awsVersion = "2.57.3"
   private val doobieVersion = "1.0.0-RC11"
 
   lazy val awsApacheClient = "software.amazon.awssdk" % "apache-client" % awsVersion
@@ -21,10 +21,10 @@ object Dependencies {
   lazy val testContainersPostgres = "com.dimafeng" %% "testcontainers-scala-postgresql" % testContainersVersion
   lazy val mockito = "org.mockito" %% "mockito-scala" % "2.2.3"
   lazy val wiremock = "com.github.tomakehurst" % "wiremock" % "3.0.1"
-  lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.152"
+  lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.153"
   lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.7.1"
   lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.308"
-  lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.493"
+  lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.494"
   lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.307"
   lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.9"
   lazy val tdrStatuses = "uk.gov.nationalarchives" %% "tdr-statuses" % "0.0.54"
