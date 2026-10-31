@@ -4,7 +4,7 @@ object Dependencies {
   private val circeVersion = "0.14.17"
 
   private val testContainersVersion = "0.44.1"
-  private val awsVersion = "2.57.5"
+  private val awsVersion = "2.57.8"
   private val doobieVersion = "1.0.0-RC11"
 
   lazy val awsApacheClient = "software.amazon.awssdk" % "apache-client" % awsVersion
@@ -12,7 +12,7 @@ object Dependencies {
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
   lazy val snsUtils = "uk.gov.nationalarchives" %% "sns-utils" % "0.1.341"
   lazy val s3Utils = "uk.gov.nationalarchives" %% "s3-utils" % "0.1.341"
-  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.250"
+  lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.251"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
   lazy val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
@@ -25,10 +25,10 @@ object Dependencies {
   lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.7.1"
   lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.308"
   lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.494"
-  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.307"
+  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.308"
   lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.9"
-  lazy val tdrStatuses = "uk.gov.nationalarchives" %% "tdr-statuses" % "0.0.54"
-  lazy val objectKeyContext = "uk.gov.nationalarchives" %% "tdr-object-key-context" % "0.0.54"
+  lazy val tdrStatuses = "uk.gov.nationalarchives" %% "tdr-statuses" % "0.0.55"
+  lazy val objectKeyContext = "uk.gov.nationalarchives" %% "tdr-object-key-context" % "0.0.55"
   lazy val catsEffectTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.8.0"
   lazy val log4cats = "org.typelevel" %% "log4cats-slf4j" % "2.8.0"
   lazy val slf4jSimple = "org.slf4j" % "slf4j-simple" % "2.0.20"
