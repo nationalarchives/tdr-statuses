@@ -4,14 +4,14 @@ object Dependencies {
   private val circeVersion = "0.14.17"
 
   private val testContainersVersion = "0.44.1"
-  private val awsVersion = "2.57.8"
+  private val awsVersion = "2.57.11"
   private val doobieVersion = "1.0.0-RC11"
 
   lazy val awsApacheClient = "software.amazon.awssdk" % "apache-client" % awsVersion
   lazy val awsS3 = "software.amazon.awssdk" % "s3" % awsVersion
   lazy val awsSsm = "software.amazon.awssdk" % "ssm" % awsVersion
-  lazy val snsUtils = "uk.gov.nationalarchives" %% "sns-utils" % "0.1.341"
-  lazy val s3Utils = "uk.gov.nationalarchives" %% "s3-utils" % "0.1.341"
+  lazy val snsUtils = "uk.gov.nationalarchives" %% "sns-utils" % "0.1.343"
+  lazy val s3Utils = "uk.gov.nationalarchives" %% "s3-utils" % "0.1.343"
   lazy val backendCheckUtils = "uk.gov.nationalarchives" %% "tdr-backend-checks-utils" % "0.1.251"
   lazy val circeCore = "io.circe" %% "circe-core" % circeVersion
   lazy val circeParser = "io.circe" %% "circe-parser" % circeVersion
@@ -24,9 +24,9 @@ object Dependencies {
   lazy val metadataSchema =  "uk.gov.nationalarchives" %% "da-metadata-schema" % "0.0.153"
   lazy val catsEffect = "org.typelevel" %% "cats-effect" % "3.7.1"
   lazy val graphqlClient = "uk.gov.nationalarchives" %% "tdr-graphql-client" % "0.0.308"
-  lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.494"
-  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.308"
-  lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.9"
+  lazy val generatedGraphql = "uk.gov.nationalarchives" %% "tdr-generated-graphql" % "0.0.496"
+  lazy val authUtils = "uk.gov.nationalarchives" %% "tdr-auth-utils" % "0.0.309"
+  lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.10"
   lazy val tdrStatuses = "uk.gov.nationalarchives" %% "tdr-statuses" % "0.0.55"
   lazy val objectKeyContext = "uk.gov.nationalarchives" %% "tdr-object-key-context" % "0.0.55"
   lazy val catsEffectTesting = "org.typelevel" %% "cats-effect-testing-scalatest" % "1.8.0"
