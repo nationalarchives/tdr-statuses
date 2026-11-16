@@ -32,7 +32,10 @@ lazy val root = (project in file("."))
       wiremock % Test,
       catsEffectTesting % Test
     ),
-    assembly / assemblyJarName := "statuses.jar"
+    assembly / assemblyJarName := "statuses.jar",
+    assembly / assemblyOutputPath := Def.uncached {
+      baseDirectory.value / "target" / "scala-2.13" / (assembly / assemblyJarName).value
+    }
   )
 
 (assembly / assemblyMergeStrategy) := {

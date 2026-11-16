@@ -16,6 +16,7 @@ jobs:
       lambda-name: statuses
       repo-name: tdr-statuses
       artifact-name: statuses
+      java-version: '17'
       build-command: |
         sbt assembly
     secrets:
