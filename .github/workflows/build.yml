@@ -16,7 +16,7 @@ jobs:
       lambda-name: statuses
       repo-name: tdr-statuses
       artifact-name: statuses
-      java-version: '17'
+      java-version: ${{vars.JAVA_RUNTIME}}
       build-command: |
         sbt assembly
     secrets:
